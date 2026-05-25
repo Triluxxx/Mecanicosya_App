@@ -43,8 +43,8 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: |
-            platforms;android-36
-            build-tools;36.0.0
+            platforms;android-35
+            build-tools;35.0.0
             ndk;27.1.12297006
             cmake;3.22.1
             platform-tools
@@ -60,7 +60,10 @@ jobs:
       - name: 🏗️ Compilar APK Release
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace \
+            -Pandroid.compileSdkVersion=35 \
+            -Pandroid.targetSdkVersion=35 \
+            -Pandroid.buildToolsVersion=35.0.0
         env:
           ANDROID_HOME: ${{ steps.android-sdk.outputs.sdk-path }}
           ANDROID_SDK_ROOT: ${{ steps.android-sdk.outputs.sdk-path }}
