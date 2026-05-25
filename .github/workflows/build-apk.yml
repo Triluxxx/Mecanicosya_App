@@ -43,7 +43,6 @@ jobs:
           export ANDROID_HOME=/usr/local/lib/android/sdk
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           echo "SDK path: $ANDROID_HOME"
-          ls -la $ANDROID_HOME/platforms/ 2>/dev/null || echo "No platforms dir"
 
       - name: 🤖 Instalar paquetes Android SDK
         run: |
@@ -55,10 +54,15 @@ jobs:
             "cmake;3.22.1" \
             "platform-tools"
 
+      - name: 🔍 Debug react-native config
+        run: |
+          npx react-native config 2>&1 | head -50
+          echo "---"
+          cat react-native.config.js
+
       - name: 📋 Crear local.properties
         run: |
           echo "sdk.dir=/usr/local/lib/android/sdk" > android/local.properties
-          echo "ndk.dir=/usr/local/lib/android/sdk/ndk/27.1.12297006" >> android/local.properties
 
       - name: 🔧 Permisos gradlew
         run: chmod +x android/gradlew

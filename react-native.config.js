@@ -7,4 +7,7 @@ module.exports = {
       bundleIdentifier: 'com.mecanicosya.app',
     },
   },
+  android: {
+    packageName: 'com.mecanicosya.app',
+  },
 };
