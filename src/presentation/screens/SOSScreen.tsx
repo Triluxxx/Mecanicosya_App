@@ -10,29 +10,21 @@ import { RootStackParamList } from '../navigation/types';
 import { Colors } from '../theme/colors';
 import { Spacing, Radius, FontSize } from '../theme/spacing';
 import MechanicCard from '../components/MechanicCard';
-import { Mechanic } from '../../domain/entities/Mechanic';
-import { MechanicRepositoryImpl } from '../../data/repositories/MechanicRepositoryImpl';
-import { ServiceRequestRepositoryImpl } from '../../data/repositories/ServiceRequestRepositoryImpl';
-import { FindNearbyMechanicsUseCase } from '../../domain/usecases/FindNearbyMechanicsUseCase';
-import { CreateServiceRequestUseCase } from '../../domain/usecases/CreateServiceRequestUseCase';
-import { useAppStore } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import { User, ServiceRequest } from '../../data/local/Database';
+import * as DB from '../../data/local/Database';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-const mechanicRepo = new MechanicRepositoryImpl();
-const requestRepo = new ServiceRequestRepositoryImpl();
-const findNearby = new FindNearbyMechanicsUseCase(mechanicRepo);
-const createRequest = new CreateServiceRequestUseCase(requestRepo);
 
 const USER_LAT = -17.3895;
 const USER_LON = -66.1568;
 
 export default function SOSScreen() {
   const navigation = useNavigation<Nav>();
-  const { user, setActiveRequest, addToHistory } = useAppStore();
+  const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
-  const [mechanics, setMechanics] = useState<Mechanic[]>([]);
+  const [mechanics, setMechanics] = useState<User[]>([]);
   const [requesting, setRequesting] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,33 +33,50 @@ export default function SOSScreen() {
 
   async function loadMechanics() {
     setLoading(true);
-    const result = await findNearby.execute(USER_LAT, USER_LON);
-    setMechanics(result);
+    const result = await DB.getAvailableMechanics();
+    // Calcular distancias simuladas
+    const withDistances = result.map((m, i) => ({
+      ...m,
+      distanceKm: parseFloat((0.5 + i * 0.4 + Math.random() * 0.5).toFixed(1)),
+      etaMinutes: 5 + i * 3 + Math.floor(Math.random() * 10),
+    }));
+    setMechanics(withDistances as any);
     setLoading(false);
   }
 
-  async function handleRequest(mechanic: Mechanic) {
+  async function handleRequest(mechanic: User) {
+    const distance = (mechanic as any).distanceKm ?? 1;
+    const eta = (mechanic as any).etaMinutes ?? 10;
+    const estimatedCost = Math.round((mechanic.pricePerHour || 70) * 1.5);
+
     Alert.alert(
       'Solicitar mecánico',
-      `¿Confirmas solicitar a ${mechanic.name}?\n\nLlegará en aprox. ${mechanic.etaMinutes} minutos.\nCosto estimado: Bs. ${mechanic.pricePerHour * 1.5}`,
+      `¿Confirmas solicitar a ${mechanic.name}?\n\n🏍️ Moto: ${user?.vehicle || 'No especificada'}\n⏱ Llegará en aprox. ${eta} minutos\n💰 Costo estimado: Bs. ${estimatedCost}`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Confirmar',
           onPress: async () => {
+            if (!user) return;
             setRequesting(mechanic.id);
-            const req = await createRequest.execute({
+
+            const problem = mechanic.specialties?.[0]
+              ? `Problema de ${mechanic.specialties[0].toLowerCase()} en mi moto`
+              : 'Solicitud de servicio para moto';
+
+            const req = await DB.createRequest({
               userId: user.id,
               mechanicId: mechanic.id,
               mechanicName: mechanic.name,
               mechanicPhoto: mechanic.photo,
-              problemDescription: 'Solicitud SOS',
+              status: 'pending',
+              problemDescription: problem,
               userLocation: { latitude: USER_LAT, longitude: USER_LON },
               userAddress: 'Av. Heroínas #456, Cochabamba',
-              estimatedCost: mechanic.pricePerHour * 1.5,
+              estimatedCost,
+              paymentStatus: 'pending',
             });
-            setActiveRequest(req);
-            addToHistory(req);
+
             setRequesting(null);
             navigation.replace('Tracking', { requestId: req.id });
           },
@@ -78,13 +87,12 @@ export default function SOSScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>✕</Text>
         </TouchableOpacity>
         <View>
-          <Text style={styles.title}>Mecánicos cercanos</Text>
+          <Text style={styles.title}>Mecánicos de motos</Text>
           <Text style={styles.subtitle}>Cochabamba, Bolivia</Text>
         </View>
         <TouchableOpacity onPress={loadMechanics} style={styles.refreshBtn}>
@@ -92,36 +100,20 @@ export default function SOSScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Mapa simulado */}
       <View style={styles.mapPlaceholder}>
         <View style={styles.mapContent}>
           <Text style={styles.mapIcon}>📍</Text>
           <Text style={styles.mapText}>Tu ubicación</Text>
-          <View style={styles.mechanicsOnMap}>
-            {mechanics.slice(0, 3).map((m, i) => (
-              <View
-                key={m.id}
-                style={[
-                  styles.mapDot,
-                  { left: 60 + i * 70, top: 30 + (i % 2) * 40 },
-                ]}
-              >
-                <Text style={styles.mapDotText}>🔧</Text>
-                <Text style={styles.mapDotDistance}>{m.distanceKm}km</Text>
-              </View>
-            ))}
-          </View>
         </View>
         <View style={styles.mapBadge}>
           <Text style={styles.mapBadgeText}>📡 {mechanics.length} mecánicos disponibles</Text>
         </View>
       </View>
 
-      {/* Lista */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Buscando mecánicos cerca tuyo...</Text>
+          <Text style={styles.loadingText}>Buscando mecánicos de motos cerca tuyo...</Text>
         </View>
       ) : (
         <FlatList
@@ -130,14 +122,12 @@ export default function SOSScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            <Text style={styles.listHeader}>
-              {mechanics.length} mecánicos disponibles
-            </Text>
+            <Text style={styles.listHeader}>{mechanics.length} mecánicos disponibles</Text>
           }
           renderItem={({ item }) => (
             <MechanicCard
-              mechanic={item}
-              onPress={() => navigation.navigate('MechanicDetail', { mechanic: item })}
+              mechanic={item as any}
+              onPress={() => navigation.navigate('MechanicDetail', { mechanic: item as any })}
               onRequest={() => handleRequest(item)}
             />
           )}
@@ -150,80 +140,36 @@ export default function SOSScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: Radius.full,
+    backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center',
   },
   backText: { color: Colors.text, fontSize: 18, fontWeight: '700' },
   title: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '700', textAlign: 'center' },
   subtitle: { color: Colors.textSecondary, fontSize: FontSize.xs, textAlign: 'center' },
   refreshBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: Radius.full,
+    backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center',
   },
   refreshText: { color: Colors.primary, fontSize: 20, fontWeight: '700' },
   mapPlaceholder: {
-    height: 180,
-    backgroundColor: '#0D1B2A',
-    margin: Spacing.md,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    position: 'relative',
+    height: 180, backgroundColor: '#0D1B2A', margin: Spacing.md,
+    borderRadius: Radius.lg, overflow: 'hidden', position: 'relative',
   },
-  mapContent: {
-    flex: 1,
-    padding: Spacing.md,
-    position: 'relative',
-  },
+  mapContent: { flex: 1, padding: Spacing.md, position: 'relative' },
   mapIcon: { fontSize: 28, position: 'absolute', bottom: 20, left: '45%' },
-  mapText: {
-    position: 'absolute',
-    bottom: 8,
-    left: '35%',
-    color: Colors.text,
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  mechanicsOnMap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  mapDot: {
-    position: 'absolute',
-    alignItems: 'center',
-  },
-  mapDotText: { fontSize: 20 },
-  mapDotDistance: { color: Colors.primary, fontSize: 9, fontWeight: '700' },
+  mapText: { position: 'absolute', bottom: 8, left: '35%', color: Colors.text, fontSize: 10, fontWeight: '600' },
   mapBadge: {
-    position: 'absolute',
-    bottom: Spacing.sm,
-    right: Spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
+    position: 'absolute', bottom: Spacing.sm, right: Spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full,
   },
   mapBadgeText: { color: Colors.text, fontSize: 11, fontWeight: '600' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
   loadingText: { color: Colors.textSecondary, fontSize: FontSize.md },
   list: { paddingHorizontal: Spacing.md, paddingBottom: 30 },
-  listHeader: {
-    color: Colors.textSecondary,
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    marginBottom: Spacing.md,
-  },
+  listHeader: { color: Colors.textSecondary, fontSize: FontSize.sm, fontWeight: '600', marginBottom: Spacing.md },
 });

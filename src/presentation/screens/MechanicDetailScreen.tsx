@@ -10,49 +10,54 @@ import { RootStackParamList } from '../navigation/types';
 import { Colors } from '../theme/colors';
 import { Spacing, Radius, FontSize } from '../theme/spacing';
 import StarRating from '../components/StarRating';
-import { CreateServiceRequestUseCase } from '../../domain/usecases/CreateServiceRequestUseCase';
-import { ServiceRequestRepositoryImpl } from '../../data/repositories/ServiceRequestRepositoryImpl';
-import { useAppStore } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import * as DB from '../../data/local/Database';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'MechanicDetail'>;
 
-const requestRepo = new ServiceRequestRepositoryImpl();
-const createRequest = new CreateServiceRequestUseCase(requestRepo);
-
 const SAMPLE_REVIEWS = [
-  { name: 'Ana P.', rating: 5, comment: 'Llegó rapidísimo, muy profesional', date: 'Hace 2 días' },
-  { name: 'Luis M.', rating: 5, comment: 'Excelente servicio, lo recomiendo', date: 'Hace 1 semana' },
-  { name: 'María G.', rating: 4, comment: 'Buen trabajo, precios justos', date: 'Hace 2 semanas' },
+  { name: 'Ana P.', rating: 5, comment: 'Llegó rapidísimo, excelente con las motos', date: 'Hace 2 días' },
+  { name: 'Luis M.', rating: 5, comment: 'Arregló mi cadena en minutos, súper profesional', date: 'Hace 1 semana' },
+  { name: 'María G.', rating: 4, comment: 'Buen trabajo con los frenos de mi moto', date: 'Hace 2 semanas' },
 ];
 
 export default function MechanicDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { mechanic } = route.params;
-  const { user, setActiveRequest, addToHistory } = useAppStore();
+  const { user } = useAuthStore();
+
+  const eta = 10 + Math.floor(Math.random() * 15);
+  const distance = (0.5 + Math.random() * 2.5).toFixed(1);
+  const estimatedCost = Math.round((mechanic.pricePerHour || 70) * 1.5);
 
   async function handleSolicitar() {
+    if (!user) return;
     Alert.alert(
       'Confirmar solicitud',
-      `Solicitar a ${mechanic.name}\nETA: ${mechanic.etaMinutes} min\nEstimado: Bs. ${mechanic.pricePerHour * 1.5}`,
+      `Solicitar a ${mechanic.name}\n🏍️ Moto: ${user.vehicle || 'No especificada'}\n⏱ ETA: ${eta} min\n💰 Estimado: Bs. ${estimatedCost}`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Confirmar',
           onPress: async () => {
-            const req = await createRequest.execute({
+            const problem = mechanic.specialties?.[0]
+              ? `Problema de ${mechanic.specialties[0].toLowerCase()} en mi moto`
+              : 'Solicitud de servicio para moto';
+
+            const req = await DB.createRequest({
               userId: user.id,
               mechanicId: mechanic.id,
               mechanicName: mechanic.name,
               mechanicPhoto: mechanic.photo,
-              problemDescription: 'Solicitud SOS',
+              status: 'pending',
+              problemDescription: problem,
               userLocation: { latitude: -17.3895, longitude: -66.1568 },
               userAddress: 'Av. Heroínas #456, Cochabamba',
-              estimatedCost: mechanic.pricePerHour * 1.5,
+              estimatedCost,
+              paymentStatus: 'pending',
             });
-            setActiveRequest(req);
-            addToHistory(req);
             navigation.navigate('Tracking', { requestId: req.id });
           },
         },
@@ -63,36 +68,40 @@ export default function MechanicDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header foto */}
         <View style={styles.photoSection}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Text style={styles.backText}>←</Text>
           </TouchableOpacity>
           <Image source={{ uri: mechanic.photo }} style={styles.photo} />
-          <View style={[styles.statusDot, mechanic.status === 'available' ? styles.online : styles.offline]} />
+          {mechanic.verified && (
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedIcon}>✓</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.content}>
-          {/* Info principal */}
           <View style={styles.mainInfo}>
-            <Text style={styles.name}>{mechanic.name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.name}>{mechanic.name}</Text>
+              {mechanic.verified && <Text style={styles.verifiedTag}>Verificado RUC</Text>}
+            </View>
             <Text style={styles.experience}>{mechanic.yearsExperience} años de experiencia</Text>
             <View style={styles.ratingRow}>
               <StarRating rating={mechanic.rating} size={18} />
-              <Text style={styles.ratingValue}>{mechanic.rating.toFixed(1)}</Text>
+              <Text style={styles.ratingValue}>{mechanic.rating?.toFixed(1) ?? '5.0'}</Text>
               <Text style={styles.reviewCount}>· {mechanic.totalReviews} reseñas</Text>
             </View>
           </View>
 
-          {/* Métricas */}
           <View style={styles.metricsRow}>
             <View style={styles.metric}>
-              <Text style={styles.metricValue}>{mechanic.distanceKm} km</Text>
+              <Text style={styles.metricValue}>{distance} km</Text>
               <Text style={styles.metricLabel}>Distancia</Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metric}>
-              <Text style={[styles.metricValue, { color: Colors.warning }]}>{mechanic.etaMinutes} min</Text>
+              <Text style={[styles.metricValue, { color: Colors.warning }]}>{eta} min</Text>
               <Text style={styles.metricLabel}>Tiempo llegada</Text>
             </View>
             <View style={styles.metricDivider} />
@@ -102,17 +111,17 @@ export default function MechanicDetailScreen() {
             </View>
           </View>
 
-          {/* Bio */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sobre él</Text>
-            <Text style={styles.bio}>{mechanic.bio}</Text>
-          </View>
+          {mechanic.bio ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Sobre él</Text>
+              <Text style={styles.bio}>{mechanic.bio}</Text>
+            </View>
+          ) : null}
 
-          {/* Especialidades */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Especialidades</Text>
             <View style={styles.tags}>
-              {mechanic.specialties.map((s) => (
+              {mechanic.specialties?.map((s) => (
                 <View key={s} style={styles.tag}>
                   <Text style={styles.tagText}>🔧 {s}</Text>
                 </View>
@@ -120,19 +129,17 @@ export default function MechanicDetailScreen() {
             </View>
           </View>
 
-          {/* Tipos de vehículo */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Vehículos que atiende</Text>
+            <Text style={styles.sectionTitle}>Tipos de moto que atiende</Text>
             <View style={styles.tags}>
-              {mechanic.vehicleTypes.map((v) => (
+              {mechanic.vehicleTypes?.map((v) => (
                 <View key={v} style={[styles.tag, styles.tagBlue]}>
-                  <Text style={[styles.tagText, { color: Colors.info }]}>🚗 {v}</Text>
+                  <Text style={[styles.tagText, { color: Colors.info }]}>🏍️ {v}</Text>
                 </View>
               ))}
             </View>
           </View>
 
-          {/* Reseñas */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Últimas reseñas</Text>
             {SAMPLE_REVIEWS.map((r, i) => (
@@ -149,11 +156,10 @@ export default function MechanicDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Botón solicitar */}
       <View style={styles.footer}>
         <View style={styles.footerInfo}>
-          <Text style={styles.footerEta}>⏱ Llega en {mechanic.etaMinutes} min</Text>
-          <Text style={styles.footerCost}>Bs. {mechanic.pricePerHour * 1.5} estimado</Text>
+          <Text style={styles.footerEta}>⏱ Llega en ~{eta} min</Text>
+          <Text style={styles.footerCost}>Bs. {estimatedCost} estimado</Text>
         </View>
         <TouchableOpacity style={styles.solicitarBtn} onPress={handleSolicitar} activeOpacity={0.85}>
           <Text style={styles.solicitarText}>Solicitar ahora</Text>
@@ -166,58 +172,40 @@ export default function MechanicDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   photoSection: {
-    alignItems: 'center',
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl,
-    backgroundColor: Colors.surface,
-    position: 'relative',
+    alignItems: 'center', paddingTop: Spacing.md, paddingBottom: Spacing.xl,
+    backgroundColor: Colors.surface, position: 'relative',
   },
   backBtn: {
-    position: 'absolute',
-    left: Spacing.md,
-    top: Spacing.md,
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', left: Spacing.md, top: Spacing.md,
+    width: 40, height: 40, borderRadius: Radius.full,
+    backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center',
   },
   backText: { color: Colors.text, fontSize: 20 },
   photo: {
-    width: 110,
-    height: 110,
-    borderRadius: Radius.full,
-    borderWidth: 3,
-    borderColor: Colors.primary,
+    width: 110, height: 110, borderRadius: Radius.full,
+    borderWidth: 3, borderColor: Colors.primary,
   },
-  statusDot: {
-    position: 'absolute',
-    bottom: Spacing.lg + 8,
-    right: '38%',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: Colors.surface,
+  verifiedBadge: {
+    position: 'absolute', bottom: Spacing.lg + 8, right: '38%',
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: Colors.success, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: Colors.surface,
   },
-  online: { backgroundColor: Colors.success },
-  offline: { backgroundColor: Colors.textMuted },
+  verifiedIcon: { color: Colors.white, fontSize: 11, fontWeight: '900' },
   content: { padding: Spacing.md },
   mainInfo: { alignItems: 'center', marginBottom: Spacing.lg },
-  name: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '800', marginBottom: 4 },
-  experience: { color: Colors.textSecondary, fontSize: FontSize.sm, marginBottom: Spacing.sm },
+  name: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '800' },
+  verifiedTag: {
+    backgroundColor: 'rgba(16,185,129,0.2)', paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: Radius.full, color: Colors.success, fontSize: FontSize.xs, fontWeight: '700',
+  },
+  experience: { color: Colors.textSecondary, fontSize: FontSize.sm, marginTop: 4, marginBottom: Spacing.sm },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ratingValue: { color: Colors.text, fontSize: FontSize.md, fontWeight: '700' },
   reviewCount: { color: Colors.textSecondary, fontSize: FontSize.sm },
   metricsRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: Radius.lg,
+    padding: Spacing.md, marginBottom: Spacing.lg, borderWidth: 1, borderColor: Colors.border,
   },
   metric: { flex: 1, alignItems: 'center' },
   metricValue: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '800' },
@@ -228,41 +216,29 @@ const styles = StyleSheet.create({
   bio: { color: Colors.textSecondary, fontSize: FontSize.sm, lineHeight: 22 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: {
-    backgroundColor: 'rgba(255,107,53,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
+    backgroundColor: 'rgba(255,107,53,0.15)', paddingHorizontal: 12,
+    paddingVertical: 6, borderRadius: Radius.full,
   },
   tagBlue: { backgroundColor: 'rgba(59,130,246,0.15)' },
   tagText: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '600' },
   reviewCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-    gap: 6,
+    backgroundColor: Colors.surface, borderRadius: Radius.md,
+    padding: Spacing.md, marginBottom: Spacing.sm, gap: 6,
   },
   reviewHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   reviewName: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '700' },
   reviewDate: { color: Colors.textMuted, fontSize: FontSize.xs },
   reviewComment: { color: Colors.textSecondary, fontSize: FontSize.sm, marginTop: 2 },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: Spacing.md,
+    flexDirection: 'row', alignItems: 'center', padding: Spacing.md,
+    backgroundColor: Colors.surface, borderTopWidth: 1, borderTopColor: Colors.border, gap: Spacing.md,
   },
   footerInfo: { flex: 1 },
   footerEta: { color: Colors.warning, fontSize: FontSize.sm, fontWeight: '600' },
   footerCost: { color: Colors.textSecondary, fontSize: FontSize.xs, marginTop: 2 },
   solicitarBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: 14,
-    borderRadius: Radius.full,
+    backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl,
+    paddingVertical: 14, borderRadius: Radius.full,
   },
   solicitarText: { color: Colors.white, fontSize: FontSize.md, fontWeight: '800' },
 });

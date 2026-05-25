@@ -1,0 +1,8 @@
+node_modules/
+.expo/web/cache/
+android/app/build/
+android/build/
+*.jks
+*.keystore
+.env
+.DS_Store
