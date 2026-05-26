@@ -54,12 +54,6 @@ jobs:
             "cmake;3.22.1" \
             "platform-tools"
 
-      - name: 🔍 Debug react-native config
-        run: |
-          npx react-native config 2>&1 | head -50
-          echo "---"
-          cat react-native.config.js
-
       - name: 📋 Crear local.properties
         run: |
           echo "sdk.dir=/usr/local/lib/android/sdk" > android/local.properties
