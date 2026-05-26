@@ -70,7 +70,7 @@ export default function MechanicCard({ mechanic, onPress, onRequest, compact }: 
           </View>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Precio/hr</Text>
-            <Text style={[styles.metaValue, { color: Colors.primary }]}>Bs. {mechanic.pricePerHour}</Text>
+            <Text style={[styles.metaValue, { color: Colors.primary }]}>S/. {mechanic.pricePerHour}</Text>
           </View>
           {onRequest && (
             <TouchableOpacity onPress={onRequest} style={styles.requestBtn}>

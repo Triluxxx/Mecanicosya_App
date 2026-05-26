@@ -51,7 +51,7 @@ export default function SOSScreen() {
 
     Alert.alert(
       'Solicitar mecánico',
-      `¿Confirmas solicitar a ${mechanic.name}?\n\n🏍️ Moto: ${user?.vehicle || 'No especificada'}\n⏱ Llegará en aprox. ${eta} minutos\n💰 Costo estimado: Bs. ${estimatedCost}`,
+      `¿Confirmas solicitar a ${mechanic.name}?\n\n🏍️ Moto: ${user?.vehicle || 'No especificada'}\n⏱ Llegará en aprox. ${eta} minutos\n💰 Costo estimado: S/. ${estimatedCost}`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {

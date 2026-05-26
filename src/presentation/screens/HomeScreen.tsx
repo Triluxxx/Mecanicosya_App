@@ -111,7 +111,7 @@ export default function HomeScreen() {
                   <View style={styles.statusBadge}>
                     <Text style={styles.statusText}>Completado ✓</Text>
                   </View>
-                  <Text style={styles.lastCost}>Bs. {lastService.finalCost}</Text>
+                  <Text style={styles.lastCost}>S/. {lastService.finalCost}</Text>
                 </View>
               </View>
             </View>

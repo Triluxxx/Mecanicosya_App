@@ -108,7 +108,7 @@ export default function MechanicHomeScreen() {
             <View key={req.id} style={styles.requestCard}>
               <Text style={styles.requestDesc}>🏍️ {req.problemDescription}</Text>
               <Text style={styles.requestAddress}>📍 {req.userAddress}</Text>
-              <Text style={styles.requestCost}>💰 Bs. {req.estimatedCost} estimado</Text>
+              <Text style={styles.requestCost}>💰 S/. {req.estimatedCost} estimado</Text>
               <View style={styles.requestActions}>
                 <TouchableOpacity
                   style={styles.acceptBtn}

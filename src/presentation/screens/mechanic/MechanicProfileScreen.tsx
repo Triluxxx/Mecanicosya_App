@@ -89,7 +89,7 @@ export default function MechanicProfileScreen() {
           <View style={styles.editSection}>
             <Text style={styles.label}>Nombre</Text>
             <TextInput style={styles.input} value={name} onChangeText={setName} />
-            <Text style={styles.label}>Precio por hora (Bs.)</Text>
+            <Text style={styles.label}>Precio por hora (S/.)</Text>
             <TextInput
               style={styles.input}
               keyboardType="numeric"
@@ -125,7 +125,7 @@ export default function MechanicProfileScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statValue}>Bs. {user?.pricePerHour}</Text>
+            <Text style={styles.statValue}>S/. {user?.pricePerHour}</Text>
             <Text style={styles.statLabel}>Por hora</Text>
           </View>
         </View>

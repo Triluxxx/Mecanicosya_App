@@ -27,7 +27,9 @@
       "package": "com.mecanicosya.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
@@ -37,6 +39,12 @@
           "locationAlwaysAndWhenInUsePermission": "Necesitamos tu ubicación para encontrar mecánicos cercanos."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d297c498-5247-48c9-ad2c-24260173dfe3"
+      }
+    },
+    "owner": "jerikareyna"
   }
 }

@@ -49,7 +49,7 @@ export default function MechanicHistoryScreen() {
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>Bs. {totalEarned}</Text>
+          <Text style={styles.summaryValue}>S/. {totalEarned}</Text>
           <Text style={styles.summaryLabel}>Total ganado</Text>
         </View>
         <View style={styles.summaryDivider} />
@@ -91,7 +91,7 @@ export default function MechanicHistoryScreen() {
                 {new Date(item.createdAt).toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' })}
               </Text>
               {item.finalCost && (
-                <Text style={styles.cardCost}>💰 Bs. {item.finalCost}</Text>
+                <Text style={styles.cardCost}>💰 S/. {item.finalCost}</Text>
               )}
               {item.rating && (
                 <Text style={styles.cardRating}>⭐ {item.rating}/5 {item.review ? `- "${item.review}"` : ''}</Text>

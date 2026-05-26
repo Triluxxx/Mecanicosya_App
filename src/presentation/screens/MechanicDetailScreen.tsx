@@ -36,7 +36,7 @@ export default function MechanicDetailScreen() {
     if (!user) return;
     Alert.alert(
       'Confirmar solicitud',
-      `Solicitar a ${mechanic.name}\n🏍️ Moto: ${user.vehicle || 'No especificada'}\n⏱ ETA: ${eta} min\n💰 Estimado: Bs. ${estimatedCost}`,
+      `Solicitar a ${mechanic.name}\n🏍️ Moto: ${user.vehicle || 'No especificada'}\n⏱ ETA: ${eta} min\n💰 Estimado: S/. ${estimatedCost}`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -106,7 +106,7 @@ export default function MechanicDetailScreen() {
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metric}>
-              <Text style={[styles.metricValue, { color: Colors.primary }]}>Bs. {mechanic.pricePerHour}</Text>
+              <Text style={[styles.metricValue, { color: Colors.primary }]}>S/. {mechanic.pricePerHour}</Text>
               <Text style={styles.metricLabel}>Por hora</Text>
             </View>
           </View>
@@ -159,7 +159,7 @@ export default function MechanicDetailScreen() {
       <View style={styles.footer}>
         <View style={styles.footerInfo}>
           <Text style={styles.footerEta}>⏱ Llega en ~{eta} min</Text>
-          <Text style={styles.footerCost}>Bs. {estimatedCost} estimado</Text>
+          <Text style={styles.footerCost}>S/. {estimatedCost} estimado</Text>
         </View>
         <TouchableOpacity style={styles.solicitarBtn} onPress={handleSolicitar} activeOpacity={0.85}>
           <Text style={styles.solicitarText}>Solicitar ahora</Text>

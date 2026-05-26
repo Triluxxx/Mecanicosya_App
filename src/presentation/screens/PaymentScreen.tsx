@@ -45,7 +45,7 @@ export default function PaymentScreen() {
     const req = await DB.getRequestById(requestId);
     Alert.alert(
       '¡Pago exitoso! 🎉',
-      `Tu pago de Bs. ${total} fue procesado.`,
+      `Tu pago de S/. ${total} fue procesado.`,
       [
         {
           text: 'Calificar servicio',
@@ -74,16 +74,16 @@ export default function PaymentScreen() {
           <Text style={styles.cardTitle}>Desglose</Text>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Servicio mecánico</Text>
-            <Text style={styles.rowValue}>Bs. {estimatedCost}</Text>
+            <Text style={styles.rowValue}>S/. {estimatedCost}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Comisión (5%)</Text>
-            <Text style={styles.rowValue}>Bs. {serviceFee}</Text>
+            <Text style={styles.rowValue}>S/. {serviceFee}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.row}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>Bs. {total}</Text>
+            <Text style={styles.totalValue}>S/. {total}</Text>
           </View>
         </View>
 
@@ -117,7 +117,7 @@ export default function PaymentScreen() {
           {loading ? (
             <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={styles.payBtnText}>Confirmar pago · Bs. {total}</Text>
+            <Text style={styles.payBtnText}>Confirmar pago · S/. {total}</Text>
           )}
         </TouchableOpacity>
       </View>

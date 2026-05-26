@@ -43,7 +43,7 @@ function RequestCard({ request, onReview }: { request: ServiceRequest; onReview:
           </View>
         </View>
         {request.finalCost && (
-          <Text style={styles.cost}>Bs. {request.finalCost}</Text>
+          <Text style={styles.cost}>S/. {request.finalCost}</Text>
         )}
       </View>
 
@@ -99,7 +99,7 @@ export default function ClientHistoryScreen() {
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>Bs. {totalSpent}</Text>
+          <Text style={styles.summaryValue}>S/. {totalSpent}</Text>
           <Text style={styles.summaryLabel}>Total gastado</Text>
         </View>
         <View style={styles.summaryDivider} />

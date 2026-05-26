@@ -165,7 +165,7 @@ export default function MechanicRegisterScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Precio/hr (Bs.)</Text>
+              <Text style={styles.label}>Precio/hr (S/.)</Text>
               <TextInput
                 style={styles.input}
                 placeholder="80"
