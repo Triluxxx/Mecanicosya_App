@@ -11,17 +11,16 @@ import { Colors } from '../theme/colors';
 import { Spacing, Radius, FontSize } from '../theme/spacing';
 import MechanicCard from '../components/MechanicCard';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useLocation } from '../hooks/useLocation';
 import { User, ServiceRequest } from '../../data/local/Database';
 import * as DB from '../../data/local/Database';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const USER_LAT = -17.3895;
-const USER_LON = -66.1568;
-
 export default function SOSScreen() {
   const navigation = useNavigation<Nav>();
   const { user } = useAuthStore();
+  const loc = useLocation();
 
   const [loading, setLoading] = useState(true);
   const [mechanics, setMechanics] = useState<User[]>([]);
@@ -71,8 +70,8 @@ export default function SOSScreen() {
               mechanicPhoto: mechanic.photo,
               status: 'pending',
               problemDescription: problem,
-              userLocation: { latitude: USER_LAT, longitude: USER_LON },
-              userAddress: 'Av. Heroínas #456, Cochabamba',
+              userLocation: { latitude: loc.latitude, longitude: loc.longitude },
+              userAddress: loc.address,
               estimatedCost,
               paymentStatus: 'pending',
             });
@@ -93,7 +92,7 @@ export default function SOSScreen() {
         </TouchableOpacity>
         <View>
           <Text style={styles.title}>Mecánicos de motos</Text>
-          <Text style={styles.subtitle}>Cochabamba, Bolivia</Text>
+          <Text style={styles.subtitle}>{loc.loading ? 'Obteniendo ubicación...' : loc.city}</Text>
         </View>
         <TouchableOpacity onPress={loadMechanics} style={styles.refreshBtn}>
           <Text style={styles.refreshText}>↻</Text>

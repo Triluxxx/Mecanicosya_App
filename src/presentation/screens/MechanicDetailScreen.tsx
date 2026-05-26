@@ -11,6 +11,7 @@ import { Colors } from '../theme/colors';
 import { Spacing, Radius, FontSize } from '../theme/spacing';
 import StarRating from '../components/StarRating';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useLocation } from '../hooks/useLocation';
 import * as DB from '../../data/local/Database';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -27,6 +28,7 @@ export default function MechanicDetailScreen() {
   const route = useRoute<Route>();
   const { mechanic } = route.params;
   const { user } = useAuthStore();
+  const loc = useLocation();
 
   const eta = 10 + Math.floor(Math.random() * 15);
   const distance = (0.5 + Math.random() * 2.5).toFixed(1);
@@ -53,8 +55,8 @@ export default function MechanicDetailScreen() {
               mechanicPhoto: mechanic.photo,
               status: 'pending',
               problemDescription: problem,
-              userLocation: { latitude: -17.3895, longitude: -66.1568 },
-              userAddress: 'Av. Heroínas #456, Cochabamba',
+              userLocation: { latitude: loc.latitude, longitude: loc.longitude },
+              userAddress: loc.address,
               estimatedCost,
               paymentStatus: 'pending',
             });
