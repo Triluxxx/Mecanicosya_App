@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -36,6 +36,8 @@ export default function MechanicRegisterScreen() {
   const [yearsExperience, setYearsExperience] = useState('');
   const [pricePerHour, setPricePerHour] = useState('');
   const [bio, setBio] = useState('');
+  const [hasTowingVehicle, setHasTowingVehicle] = useState(false);
+  const [towingPlate, setTowingPlate] = useState('');
   const [loading, setLoading] = useState(false);
 
   function toggleSpecialty(s: string) {
@@ -68,6 +70,8 @@ export default function MechanicRegisterScreen() {
       yearsExperience,
       pricePerHour,
       bio: bio.trim(),
+      hasTowingVehicle,
+      towingPlate: towingPlate.trim(),
     });
     setLoading(false);
     // Navigation handled by auth store (user.role === 'mechanic')
@@ -151,6 +155,32 @@ export default function MechanicRegisterScreen() {
             ))}
           </View>
 
+          {/* Vehículo de carga / grúa */}
+          <View style={styles.towingRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>¿Cuentas con vehículo de carga/grúa?</Text>
+              <Text style={styles.labelHintGray}>
+                Te permite ofrecer el plan Experto: remolque y fallas que no se arreglan en el sitio
+              </Text>
+            </View>
+            <Switch
+              value={hasTowingVehicle}
+              onValueChange={setHasTowingVehicle}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor={Colors.white}
+            />
+          </View>
+          {hasTowingVehicle && (
+            <TextInput
+              style={styles.input}
+              placeholder="Placa del vehículo de carga (ej. ABC-123)"
+              placeholderTextColor={Colors.textMuted}
+              autoCapitalize="characters"
+              value={towingPlate}
+              onChangeText={setTowingPlate}
+            />
+          )}
+
           {/* Años y precio */}
           <View style={styles.rowInputs}>
             <View style={{ flex: 1 }}>
@@ -223,6 +253,18 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   labelHint: { color: Colors.success, fontWeight: '400' },
+  labelHintGray: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 },
+  towingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: Spacing.sm,
+  },
   input: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,

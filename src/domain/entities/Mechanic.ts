@@ -1,4 +1,5 @@
 export type MechanicStatus = 'available' | 'busy' | 'offline';
+export type MechanicPlan = 'basic' | 'expert';
 
 export interface MechanicLocation {
   latitude: number;
@@ -21,4 +22,8 @@ export interface Mechanic {
   yearsExperience: number;
   vehicleTypes: string[];
   bio: string;
+  plan: MechanicPlan;
+  hasTowingVehicle: boolean;
+  towingPlate?: string;
+  badge?: string;
 }

@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Tipos ───
 export type UserRole = 'client' | 'mechanic';
+// cliente: 'free' | 'premium'  ·  mecánico: 'basic' | 'expert'
+export type UserPlan = 'free' | 'premium' | 'basic' | 'expert';
 
 export interface User {
   id: string;
@@ -24,6 +26,11 @@ export interface User {
   rating: number;
   totalReviews: number;
   totalServices: number;
+  plan: UserPlan;
+  hasTowingVehicle: boolean;  // mecánico: cuenta con movilidad de carga/grúa
+  towingPlate: string;        // mecánico: placa del vehículo de carga
+  badge: string;              // ej. 'FORMAL', 'VIP'
+  backendId?: string;         // id real en el backend (mecanicosya-backend), si ya se sincronizó
   createdAt: string;
 }
 
@@ -39,7 +46,7 @@ export interface ServiceRequest {
   userAddress: string;
   estimatedCost: number;
   finalCost?: number;
-  paymentMethod?: 'cash' | 'card' | 'transfer';
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'yape' | 'plin';
   paymentStatus: 'pending' | 'paid' | 'refunded';
   rating?: number;
   review?: string;
@@ -103,6 +110,10 @@ export async function createUser(data: Partial<User> & { phone: string; role: Us
     rating: data.rating ?? 5.0,
     totalReviews: data.totalReviews ?? 0,
     totalServices: data.totalServices ?? 0,
+    plan: data.plan ?? (data.role === 'mechanic' ? 'basic' : 'free'),
+    hasTowingVehicle: data.hasTowingVehicle ?? false,
+    towingPlate: data.towingPlate ?? '',
+    badge: data.badge ?? '',
     createdAt: now,
   };
   users.push(newUser);
@@ -213,7 +224,7 @@ export async function seedDemoMechanics(): Promise<void> {
 
   const demoMechanics: Partial<User>[] = [
     {
-      phone: '+591 70011111',
+      phone: '+51 987011111',
       role: 'mechanic',
       name: 'Carlos Mendoza',
       photo: 'https://randomuser.me/api/portraits/men/32.jpg',
@@ -230,9 +241,13 @@ export async function seedDemoMechanics(): Promise<void> {
       rating: 4.9,
       totalReviews: 127,
       totalServices: 0,
+      plan: 'expert',
+      hasTowingVehicle: true,
+      towingPlate: 'F8G-321',
+      badge: 'FORMAL',
     },
     {
-      phone: '+591 70022222',
+      phone: '+51 987022222',
       role: 'mechanic',
       name: 'Roberto Flores',
       photo: 'https://randomuser.me/api/portraits/men/45.jpg',
@@ -249,9 +264,13 @@ export async function seedDemoMechanics(): Promise<void> {
       rating: 4.7,
       totalReviews: 89,
       totalServices: 0,
+      plan: 'basic',
+      hasTowingVehicle: false,
+      towingPlate: '',
+      badge: '',
     },
     {
-      phone: '+591 70033333',
+      phone: '+51 987033333',
       role: 'mechanic',
       name: 'Miguel Quispe',
       photo: 'https://randomuser.me/api/portraits/men/58.jpg',
@@ -268,9 +287,13 @@ export async function seedDemoMechanics(): Promise<void> {
       rating: 4.8,
       totalReviews: 203,
       totalServices: 0,
+      plan: 'expert',
+      hasTowingVehicle: true,
+      towingPlate: 'ABC-123',
+      badge: 'VIP',
     },
     {
-      phone: '+591 70044444',
+      phone: '+51 987044444',
       role: 'mechanic',
       name: 'Andrés Torrico',
       photo: 'https://randomuser.me/api/portraits/men/22.jpg',
@@ -287,9 +310,13 @@ export async function seedDemoMechanics(): Promise<void> {
       rating: 4.5,
       totalReviews: 54,
       totalServices: 0,
+      plan: 'basic',
+      hasTowingVehicle: false,
+      towingPlate: '',
+      badge: '',
     },
     {
-      phone: '+591 70055555',
+      phone: '+51 987055555',
       role: 'mechanic',
       name: 'Jorge Vargas',
       photo: 'https://randomuser.me/api/portraits/men/71.jpg',
@@ -306,6 +333,10 @@ export async function seedDemoMechanics(): Promise<void> {
       rating: 4.6,
       totalReviews: 142,
       totalServices: 0,
+      plan: 'basic',
+      hasTowingVehicle: false,
+      towingPlate: '',
+      badge: '',
     },
   ];
 
@@ -333,6 +364,10 @@ export async function seedDemoMechanics(): Promise<void> {
       rating: m.rating!,
       totalReviews: m.totalReviews!,
       totalServices: 0,
+      plan: m.plan ?? 'basic',
+      hasTowingVehicle: m.hasTowingVehicle ?? false,
+      towingPlate: m.towingPlate ?? '',
+      badge: m.badge ?? '',
       createdAt: now,
     });
   }

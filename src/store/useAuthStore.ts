@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User, UserRole } from '../data/local/Database';
 import * as DB from '../data/local/Database';
+import { ApiClient } from '../data/remote/ApiClient';
 
 interface AuthState {
   user: User | null;
@@ -21,10 +22,13 @@ interface AuthState {
     pricePerHour: string;
     bio: string;
     vehicleTypes: string[];
+    hasTowingVehicle: boolean;
+    towingPlate?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
+  syncBackendId: (location?: { lat: number; lng: number }) => Promise<string | null>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -102,6 +106,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       pricePerHour: parseInt(data.pricePerHour) || 0,
       bio: data.bio,
       vehicleTypes: data.vehicleTypes,
+      hasTowingVehicle: data.hasTowingVehicle,
+      towingPlate: data.hasTowingVehicle ? (data.towingPlate ?? '') : '',
     });
     if (updated) {
       await DB.saveCurrentUser(updated);
@@ -131,6 +137,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (fresh) {
       await DB.saveCurrentUser(fresh);
       set({ user: fresh, isMechanic: fresh.role === 'mechanic' });
+    }
+  },
+
+  // Registra (o reutiliza) el usuario en el backend real y guarda su id ahí.
+  // Si el backend no está disponible, falla en silencio y devuelve null.
+  syncBackendId: async (location) => {
+    const current = get().user;
+    if (!current) return null;
+    if (current.backendId) return current.backendId;
+    try {
+      const { user: apiUser } = await ApiClient.authDemo({
+        role: current.role === 'mechanic' ? 'mechanic' : 'driver',
+        name: current.name,
+        phone: current.phone,
+        location,
+      });
+      const updated = await DB.updateUser(current.id, { backendId: apiUser.id });
+      if (updated) {
+        await DB.saveCurrentUser(updated);
+        set({ user: updated });
+      }
+      return apiUser.id;
+    } catch (e) {
+      console.warn('No se pudo sincronizar con el backend real:', e);
+      return null;
     }
   },
 }));

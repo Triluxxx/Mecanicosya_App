@@ -36,6 +36,8 @@ import MechanicDetailScreen from '../screens/MechanicDetailScreen';
 import TrackingScreen from '../screens/TrackingScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import ReviewScreen from '../screens/ReviewScreen';
+import BenefitsScreen from '../screens/BenefitsScreen';
+import PartsScreen from '../screens/PartsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const ClientTab = createBottomTabNavigator<ClientTabParamList>();
@@ -192,6 +194,7 @@ export default function AppNavigator() {
               component={RequestDetailPlaceholder}
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen name="Benefits" component={BenefitsScreen} options={{ animation: 'slide_from_right' }} />
           </>
         ) : (
           // ─── Client Stack ───
@@ -202,6 +205,8 @@ export default function AppNavigator() {
             <Stack.Screen name="Tracking" component={TrackingScreen} options={{ animation: 'slide_from_right', gestureEnabled: false }} />
             <Stack.Screen name="Payment" component={PaymentScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
             <Stack.Screen name="Review" component={ReviewScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+            <Stack.Screen name="Benefits" component={BenefitsScreen} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="Parts" component={PartsScreen} options={{ animation: 'slide_from_right' }} />
           </>
         )}
       </Stack.Navigator>

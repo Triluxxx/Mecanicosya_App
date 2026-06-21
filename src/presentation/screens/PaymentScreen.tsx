@@ -10,22 +10,28 @@ import { RootStackParamList } from '../navigation/types';
 import { Colors } from '../theme/colors';
 import { Spacing, Radius, FontSize } from '../theme/spacing';
 import * as DB from '../../data/local/Database';
+import { ApiClient } from '../../data/remote/ApiClient';
+import { useAuthStore } from '../../store/useAuthStore';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Payment'>;
+type Method = 'cash' | 'card' | 'transfer' | 'yape' | 'plin';
 
-const PAYMENT_METHODS = [
-  { id: 'cash' as const, label: 'Efectivo', icon: '💵', desc: 'Paga en mano al mecánico' },
-  { id: 'card' as const, label: 'Tarjeta', icon: '💳', desc: 'Visa / Mastercard / Débito' },
-  { id: 'transfer' as const, label: 'Transferencia', icon: '📱', desc: 'QR o transferencia bancaria' },
+const PAYMENT_METHODS: { id: Method; label: string; icon: string; desc: string }[] = [
+  { id: 'cash', label: 'Efectivo', icon: '💵', desc: 'Paga en mano al mecánico' },
+  { id: 'card', label: 'Tarjeta', icon: '💳', desc: 'Visa / Mastercard / Débito' },
+  { id: 'transfer', label: 'Transferencia', icon: '🏦', desc: 'Transferencia bancaria' },
+  { id: 'yape', label: 'Yape', icon: '📱', desc: 'Pago con QR Yape' },
+  { id: 'plin', label: 'Plin', icon: '📱', desc: 'Pago con QR Plin' },
 ];
 
 export default function PaymentScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { requestId, estimatedCost } = route.params;
+  const { user, syncBackendId } = useAuthStore();
 
-  const [selected, setSelected] = useState<'cash' | 'card' | 'transfer'>('cash');
+  const [selected, setSelected] = useState<Method>('cash');
   const [loading, setLoading] = useState(false);
 
   const serviceFee = Math.round(estimatedCost * 0.05);
@@ -41,6 +47,21 @@ export default function PaymentScreen() {
       completedAt: new Date().toISOString(),
     });
     setLoading(false);
+
+    // Espejo del pago en el backend real (Yape/Plin van como QR), sin bloquear si falla
+    if (user) {
+      syncBackendId()
+        .then((userId) => {
+          if (!userId) return;
+          return ApiClient.createPayment({
+            userId,
+            amount: total,
+            method: selected === 'yape' || selected === 'plin' ? 'yape_plin_qr' : selected,
+            concept: 'Pago de servicio MecánicosYa',
+          });
+        })
+        .catch((e) => console.warn('No se pudo replicar el pago en el backend real:', e));
+    }
 
     const req = await DB.getRequestById(requestId);
     Alert.alert(

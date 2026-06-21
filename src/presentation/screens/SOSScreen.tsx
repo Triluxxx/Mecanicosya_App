@@ -14,8 +14,58 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useLocation } from '../hooks/useLocation';
 import { User, ServiceRequest } from '../../data/local/Database';
 import * as DB from '../../data/local/Database';
+import { ApiClient, ApiUser } from '../../data/remote/ApiClient';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return Number((2 * R * Math.asin(Math.sqrt(h))).toFixed(1));
+}
+
+// El backend (mecanicosya-backend) todavía no guarda specialties/precio/bio —
+// se completan con valores por defecto hasta que se extienda ese esquema.
+function apiMechanicToLocalUser(
+  u: ApiUser,
+  fromLocation?: { lat: number; lng: number }
+): User & { distanceKm: number; etaMinutes: number } {
+  const distanceKm = fromLocation && u.location ? haversineKm(fromLocation, u.location) : 1.5;
+  return {
+    id: u.id,
+    phone: u.phone,
+    role: 'mechanic',
+    name: u.name,
+    email: '',
+    photo: u.photoUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name),
+    vehicle: '',
+    ruc: '',
+    verified: u.verified,
+    specialties: [],
+    yearsExperience: 0,
+    pricePerHour: 0,
+    bio: '',
+    vehicleTypes: [],
+    latitude: u.location?.lat ?? 0,
+    longitude: u.location?.lng ?? 0,
+    status: u.available ? 'online' : 'offline',
+    rating: 5,
+    totalReviews: 0,
+    totalServices: 0,
+    plan: u.plan,
+    hasTowingVehicle: Boolean(u.plate),
+    towingPlate: u.plate ?? '',
+    badge: u.badge ?? '',
+    backendId: u.id,
+    createdAt: u.createdAt,
+    distanceKm,
+    etaMinutes: Math.max(5, Math.round(distanceKm * 4)),
+  };
+}
 
 export default function SOSScreen() {
   const navigation = useNavigation<Nav>();
@@ -25,6 +75,7 @@ export default function SOSScreen() {
   const [loading, setLoading] = useState(true);
   const [mechanics, setMechanics] = useState<User[]>([]);
   const [requesting, setRequesting] = useState<string | null>(null);
+  const { syncBackendId } = useAuthStore();
 
   useEffect(() => {
     loadMechanics();
@@ -33,13 +84,25 @@ export default function SOSScreen() {
   async function loadMechanics() {
     setLoading(true);
     const result = await DB.getAvailableMechanics();
-    // Calcular distancias simuladas
+    // Calcular distancias simuladas para los mecánicos demo locales
     const withDistances = result.map((m, i) => ({
       ...m,
       distanceKm: parseFloat((0.5 + i * 0.4 + Math.random() * 0.5).toFixed(1)),
       etaMinutes: 5 + i * 3 + Math.floor(Math.random() * 10),
     }));
-    setMechanics(withDistances as any);
+
+    // Sumar mecánicos reales del backend (si está disponible), sin bloquear si falla
+    let remoteMechanics: ReturnType<typeof apiMechanicToLocalUser>[] = [];
+    try {
+      const apiMechanics = await ApiClient.getMechanics();
+      remoteMechanics = apiMechanics
+        .filter((m) => m.available)
+        .map((m) => apiMechanicToLocalUser(m, { lat: loc.latitude, lng: loc.longitude }));
+    } catch (e) {
+      console.warn('No se pudo cargar mecánicos del backend real:', e);
+    }
+
+    setMechanics([...withDistances, ...remoteMechanics] as any);
     setLoading(false);
   }
 
@@ -75,6 +138,18 @@ export default function SOSScreen() {
               estimatedCost,
               paymentStatus: 'pending',
             });
+
+            // Espejo del SOS en el backend real, sin bloquear el flujo local si falla
+            syncBackendId({ lat: loc.latitude, lng: loc.longitude })
+              .then((driverId) => {
+                if (!driverId) return;
+                return ApiClient.createSos({
+                  driverId,
+                  address: loc.address,
+                  location: { lat: loc.latitude, lng: loc.longitude },
+                });
+              })
+              .catch((e) => console.warn('No se pudo replicar el SOS en el backend real:', e));
 
             setRequesting(null);
             navigation.replace('Tracking', { requestId: req.id });

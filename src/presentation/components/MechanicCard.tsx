@@ -29,18 +29,28 @@ export default function MechanicCard({ mechanic, onPress, onRequest, compact }: 
       <View style={styles.info}>
         <View style={styles.row}>
           <Text style={styles.name}>{mechanic.name}</Text>
-          {mechanic.verified ? (
-            <View style={styles.badgeGreen}>
-              <Text style={styles.badgeGreenText}>Verificado</Text>
-            </View>
-          ) : (
-            <View style={[styles.badge, mechanic.status === 'online' ? styles.badgeGreen : styles.badgeGray]}>
-              <Text style={styles.badgeText}>
-                {mechanic.status === 'online' ? 'Disponible' : 'Ocupado'}
-              </Text>
-            </View>
-          )}
+          <View style={styles.badgeGroup}>
+            {mechanic.plan === 'expert' && (
+              <View style={styles.badgeExpert}>
+                <Text style={styles.badgeExpertText}>🔧 Experto</Text>
+              </View>
+            )}
+            {mechanic.verified ? (
+              <View style={styles.badgeGreen}>
+                <Text style={styles.badgeGreenText}>Verificado</Text>
+              </View>
+            ) : (
+              <View style={[styles.badge, mechanic.status === 'online' ? styles.badgeGreen : styles.badgeGray]}>
+                <Text style={styles.badgeText}>
+                  {mechanic.status === 'online' ? 'Disponible' : 'Ocupado'}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
+        {mechanic.hasTowingVehicle && (
+          <Text style={styles.towingHint}>🚚 Cuenta con vehículo de carga/grúa</Text>
+        )}
 
         <View style={styles.ratingRow}>
           <StarRating rating={mechanic.rating ?? 5} size={14} />
@@ -128,6 +138,15 @@ const styles = StyleSheet.create({
   badgeGreenText: { color: Colors.success, fontSize: FontSize.xs, fontWeight: '600' },
   badgeGray: { backgroundColor: Colors.card },
   badgeText: { color: Colors.success, fontSize: FontSize.xs, fontWeight: '600' },
+  badgeGroup: { flexDirection: 'row', gap: 5 },
+  badgeExpert: {
+    backgroundColor: 'rgba(255,107,53,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+  },
+  badgeExpertText: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: '700' },
+  towingHint: { color: Colors.textMuted, fontSize: FontSize.xs },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingText: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '700' },
   reviewCount: { color: Colors.textSecondary, fontSize: FontSize.xs },

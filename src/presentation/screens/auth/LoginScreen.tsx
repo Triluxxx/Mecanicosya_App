@@ -25,29 +25,29 @@ export default function LoginScreen() {
   const formatPhone = (text: string) => {
     const digits = text.replace(/\D/g, '');
     if (digits.length <= 3) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-    return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7, 11)}`;
+    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)}`;
   };
 
   async function handleSendCode() {
     const digits = phone.replace(/\D/g, '');
-    if (digits.length < 8) {
+    if (digits.length < 9) {
       Alert.alert('Error', 'Ingresa un número de celular válido');
       return;
     }
     setLoading(true);
-    const code = await sendOTP(`+591 ${digits}`);
+    const code = await sendOTP(`+51 ${digits}`);
     setLoading(false);
-    navigation.navigate('OTP', { phone: `+591 ${digits}`, code });
+    navigation.navigate('OTP', { phone: `+51 ${digits}`, code });
   }
 
   async function handleQuickLogin(quickPhone: string) {
     setPhone(quickPhone);
     const digits = quickPhone.replace(/\D/g, '');
     setLoading(true);
-    const code = await sendOTP(`+591 ${digits}`);
+    const code = await sendOTP(`+51 ${digits}`);
     setLoading(false);
-    navigation.navigate('OTP', { phone: `+591 ${digits}`, code });
+    navigation.navigate('OTP', { phone: `+51 ${digits}`, code });
   }
 
   return (
@@ -69,15 +69,15 @@ export default function LoginScreen() {
 
           {/* Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.prefix}>+591</Text>
+            <Text style={styles.prefix}>+51</Text>
             <TextInput
               style={styles.input}
-              placeholder="700 12345"
+              placeholder="987 654 321"
               placeholderTextColor={Colors.textMuted}
               keyboardType="phone-pad"
               value={phone}
               onChangeText={(t) => setPhone(formatPhone(t))}
-              maxLength={13}
+              maxLength={11}
             />
           </View>
 
@@ -109,14 +109,14 @@ export default function LoginScreen() {
           <View style={styles.quickRow}>
             <TouchableOpacity
               style={styles.quickBtn}
-              onPress={() => handleQuickLogin('70000001')}
+              onPress={() => handleQuickLogin('900000001')}
             >
               <Text style={styles.quickIcon}>👤</Text>
               <Text style={styles.quickLabel}>Cliente demo</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickBtn}
-              onPress={() => handleQuickLogin('70011111')}
+              onPress={() => handleQuickLogin('987011111')}
             >
               <Text style={styles.quickIcon}>🔧</Text>
               <Text style={styles.quickLabel}>Mecánico demo</Text>

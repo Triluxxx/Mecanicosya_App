@@ -31,7 +31,7 @@ export const useAppStore = create<AppState>((set) => ({
   user: {
     id: 'user1',
     name: 'Sergio López',
-    phone: '+591 70099999',
+    phone: '+51 987099999',
     email: 'sergio@email.com',
     photo: 'https://randomuser.me/api/portraits/men/1.jpg',
     vehicle: 'Toyota Corolla 2018',

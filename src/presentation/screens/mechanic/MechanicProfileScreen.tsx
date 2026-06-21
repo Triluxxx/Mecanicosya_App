@@ -5,14 +5,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, FontSize } from '../../theme/spacing';
 import StarRating from '../../components/StarRating';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { RootStackParamList } from '../../navigation/types';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function MechanicProfileScreen() {
+  const navigation = useNavigation<Nav>();
   const { user, logout, updateProfile } = useAuthStore();
+  const [hasTowingVehicle, setHasTowingVehicle] = useState(user?.hasTowingVehicle ?? false);
+  const [towingPlate, setTowingPlate] = useState(user?.towingPlate ?? '');
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
   const [pricePerHour, setPricePerHour] = useState(String(user?.pricePerHour ?? ''));
@@ -24,6 +32,8 @@ export default function MechanicProfileScreen() {
       name: name.trim(),
       pricePerHour: parseInt(pricePerHour) || 0,
       bio: bio.trim(),
+      hasTowingVehicle,
+      towingPlate: hasTowingVehicle ? towingPlate.trim() : '',
     });
     setEditing(false);
     Alert.alert('Perfil actualizado', 'Tu información fue guardada.');
@@ -55,6 +65,7 @@ export default function MechanicProfileScreen() {
           </View>
           <View style={styles.nameRow}>
             <Text style={styles.userName}>{user?.name}</Text>
+            {user?.plan === 'expert' && <Text style={styles.expertTag}>🔧 Experto</Text>}
             {user?.verified && <Text style={styles.verifiedTag}>Verificado RUC</Text>}
           </View>
           <Text style={styles.userPhone}>{user?.phone}</Text>
@@ -103,6 +114,27 @@ export default function MechanicProfileScreen() {
               value={bio}
               onChangeText={setBio}
             />
+
+            <View style={styles.towingRow}>
+              <Text style={styles.label}>¿Cuentas con vehículo de carga/grúa?</Text>
+              <Switch
+                value={hasTowingVehicle}
+                onValueChange={setHasTowingVehicle}
+                trackColor={{ false: Colors.card, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            </View>
+            {hasTowingVehicle && (
+              <TextInput
+                style={styles.input}
+                placeholder="Placa del vehículo de carga"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="characters"
+                value={towingPlate}
+                onChangeText={setTowingPlate}
+              />
+            )}
+
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
               <Text style={styles.saveBtnText}>Guardar cambios</Text>
             </TouchableOpacity>
@@ -162,6 +194,40 @@ export default function MechanicProfileScreen() {
           </View>
         ) : null}
 
+        {/* Repuestos */}
+        <TouchableOpacity
+          style={styles.planCard}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('Parts')}
+        >
+          <Text style={styles.planIcon}>🛠️</Text>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuLabel}>Repuestos</Text>
+            <Text style={styles.menuDesc}>Llantas, cámaras, cadenas y más que se venden en la app</Text>
+          </View>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+
+        {/* Plan / Beneficios */}
+        <TouchableOpacity
+          style={styles.planCard}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('Benefits')}
+        >
+          <Text style={styles.planIcon}>⭐</Text>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuLabel}>
+              {user?.plan === 'expert' ? 'Plan Experto activo' : 'Mejora a Experto'}
+            </Text>
+            <Text style={styles.menuDesc}>
+              {user?.plan === 'expert'
+                ? 'Recibes solicitudes de remolque y fallas complejas'
+                : 'Atiende remolques y fallas complejas con vehículo de carga'}
+            </Text>
+          </View>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
           <Text style={styles.logoutText}>🚪  Cerrar sesión</Text>
@@ -218,6 +284,21 @@ const styles = StyleSheet.create({
     color: Colors.success,
     fontSize: FontSize.xs,
     fontWeight: '700',
+  },
+  expertTag: {
+    backgroundColor: 'rgba(255,107,53,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+    color: Colors.primary,
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+  },
+  towingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
   },
   userPhone: { color: Colors.textSecondary, fontSize: FontSize.sm, marginTop: 4 },
   rucText: { color: Colors.success, fontSize: FontSize.sm, marginTop: 2, fontWeight: '600' },
@@ -297,6 +378,23 @@ const styles = StyleSheet.create({
   tagBlue: { backgroundColor: 'rgba(59,130,246,0.15)' },
   tagText: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '600' },
   bioText: { color: Colors.textSecondary, fontSize: FontSize.sm, lineHeight: 22 },
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    marginHorizontal: Spacing.md,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: Spacing.md,
+  },
+  planIcon: { fontSize: 28, width: 32, textAlign: 'center' },
+  menuContent: { flex: 1 },
+  menuLabel: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' },
+  menuDesc: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 },
+  menuArrow: { color: Colors.textMuted, fontSize: 22 },
   logoutBtn: {
     marginHorizontal: Spacing.md,
     padding: Spacing.md,

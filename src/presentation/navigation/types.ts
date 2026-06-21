@@ -37,8 +37,12 @@ export type RootStackParamList = {
   Tracking: { requestId: string };
   Payment: { requestId: string; estimatedCost: number };
   Review: { requestId: string; mechanicName: string };
+  Parts: undefined;
 
   // Mechanic
   MechanicTabs: undefined;
   RequestDetail: { requestId: string };
+
+  // Compartidas (cliente y mecánico)
+  Benefits: undefined;
 };

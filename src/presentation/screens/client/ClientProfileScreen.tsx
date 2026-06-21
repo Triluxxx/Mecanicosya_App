@@ -5,13 +5,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, FontSize } from '../../theme/spacing';
 import { useAuthStore } from '../../../store/useAuthStore';
 import * as DB from '../../../data/local/Database';
+import { RootStackParamList } from '../../navigation/types';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ClientProfileScreen() {
+  const navigation = useNavigation<Nav>();
   const { user, logout, updateProfile, refreshUser } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
@@ -39,7 +45,9 @@ export default function ClientProfileScreen() {
           </View>
           <Text style={styles.userName}>{user?.name}</Text>
           <Text style={styles.userPhone}>{user?.phone}</Text>
-          <Text style={styles.userRole}>🏍️ Cliente</Text>
+          <Text style={styles.userRole}>
+            🏍️ Cliente {user?.plan === 'premium' ? '· ⭐ Premium' : '· Normal'}
+          </Text>
 
           <TouchableOpacity
             style={styles.editBtn}
@@ -80,8 +88,14 @@ export default function ClientProfileScreen() {
         {/* Menú */}
         <View style={styles.menuSection}>
           <MenuItem icon="📋" label="Mis servicios" desc={`${user?.totalServices ?? 0} servicios realizados`} />
-          <MenuItem icon="💳" label="Métodos de pago" desc="Efectivo, Tarjeta" />
-          <MenuItem icon="⭐" label="Calificar la app" desc="Déjanos tu opinión" />
+          <MenuItem icon="🛠️" label="Repuestos" desc="Llantas, cámaras y más" onPress={() => navigation.navigate('Parts')} />
+          <MenuItem
+            icon="⭐"
+            label="Beneficios"
+            desc={user?.plan === 'premium' ? 'Plan Premium activo' : 'Conoce el plan Premium'}
+            onPress={() => navigation.navigate('Benefits')}
+          />
+          <MenuItem icon="💳" label="Métodos de pago" desc="Efectivo, Tarjeta, Yape, Plin" />
           <MenuItem icon="❓" label="Ayuda y soporte" desc="FAQ, Chat" />
         </View>
 
@@ -97,9 +111,9 @@ export default function ClientProfileScreen() {
   );
 }
 
-function MenuItem({ icon, label, desc }: { icon: string; label: string; desc: string }) {
+function MenuItem({ icon, label, desc, onPress }: { icon: string; label: string; desc: string; onPress?: () => void }) {
   return (
-    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={onPress}>
       <Text style={styles.menuIcon}>{icon}</Text>
       <View style={styles.menuContent}>
         <Text style={styles.menuLabel}>{label}</Text>

@@ -6,3 +6,5 @@ android/build/
 *.keystore
 .env
 .DS_Store
+*.docx
+*.docx:Zone.Identifier

@@ -86,8 +86,12 @@ export default function MechanicDetailScreen() {
           <View style={styles.mainInfo}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={styles.name}>{mechanic.name}</Text>
+              {mechanic.plan === 'expert' && <Text style={styles.expertTag}>🔧 Experto</Text>}
               {mechanic.verified && <Text style={styles.verifiedTag}>Verificado RUC</Text>}
             </View>
+            {mechanic.hasTowingVehicle && (
+              <Text style={styles.towingTag}>🚚 Cuenta con vehículo de carga/grúa</Text>
+            )}
             <Text style={styles.experience}>{mechanic.yearsExperience} años de experiencia</Text>
             <View style={styles.ratingRow}>
               <StarRating rating={mechanic.rating} size={18} />
@@ -201,6 +205,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16,185,129,0.2)', paddingHorizontal: 8, paddingVertical: 2,
     borderRadius: Radius.full, color: Colors.success, fontSize: FontSize.xs, fontWeight: '700',
   },
+  expertTag: {
+    backgroundColor: 'rgba(255,107,53,0.2)', paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: Radius.full, color: Colors.primary, fontSize: FontSize.xs, fontWeight: '700',
+  },
+  towingTag: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 },
   experience: { color: Colors.textSecondary, fontSize: FontSize.sm, marginTop: 4, marginBottom: Spacing.sm },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ratingValue: { color: Colors.text, fontSize: FontSize.md, fontWeight: '700' },

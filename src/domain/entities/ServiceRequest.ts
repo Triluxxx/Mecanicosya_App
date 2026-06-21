@@ -6,7 +6,7 @@ export type RequestStatus =
   | 'completed'
   | 'cancelled';
 
-export type PaymentMethod = 'cash' | 'card' | 'transfer';
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'yape' | 'plin';
 export type PaymentStatus = 'pending' | 'paid' | 'refunded';
 
 export interface ServiceRequest {
