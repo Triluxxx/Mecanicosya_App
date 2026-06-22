@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CardField, useStripe } from '@stripe/stripe-react-native';
 
 import { RootStackParamList } from '../navigation/types';
 import { Colors } from '../theme/colors';
@@ -30,15 +31,16 @@ export default function PaymentScreen() {
   const route = useRoute<Route>();
   const { requestId, estimatedCost } = route.params;
   const { user, syncBackendId } = useAuthStore();
+  const { confirmPayment } = useStripe();
 
   const [selected, setSelected] = useState<Method>('cash');
   const [loading, setLoading] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
 
   const serviceFee = Math.round(estimatedCost * 0.05);
   const total = estimatedCost + serviceFee;
 
-  async function handlePay() {
-    setLoading(true);
+  async function finishPayment(paymentIntentId?: string) {
     await DB.updateRequest(requestId, {
       status: 'completed',
       paymentMethod: selected,
@@ -46,7 +48,6 @@ export default function PaymentScreen() {
       paymentStatus: 'paid',
       completedAt: new Date().toISOString(),
     });
-    setLoading(false);
 
     // Espejo del pago en el backend real (Yape/Plin van como QR), sin bloquear si falla
     if (user) {
@@ -57,7 +58,9 @@ export default function PaymentScreen() {
             userId,
             amount: total,
             method: selected === 'yape' || selected === 'plin' ? 'yape_plin_qr' : selected,
-            concept: 'Pago de servicio MecánicosYa',
+            concept: paymentIntentId
+              ? `Pago de servicio MecánicosYa (Stripe: ${paymentIntentId})`
+              : 'Pago de servicio MecánicosYa',
           });
         })
         .catch((e) => console.warn('No se pudo replicar el pago en el backend real:', e));
@@ -81,6 +84,46 @@ export default function PaymentScreen() {
         },
       ]
     );
+  }
+
+  async function handlePayWithCard() {
+    if (!cardComplete) {
+      Alert.alert('Tarjeta incompleta', 'Ingresa los datos de tu tarjeta para continuar.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { clientSecret, paymentIntentId } = await ApiClient.createPaymentIntent({
+        amount: total,
+        currency: 'pen',
+      });
+      const { error, paymentIntent } = await confirmPayment(clientSecret, {
+        paymentMethodType: 'Card',
+      });
+      if (error) {
+        Alert.alert('Pago rechazado', error.message);
+        return;
+      }
+      if (paymentIntent?.status !== 'Succeeded') {
+        Alert.alert('Pago no completado', 'El estado del pago no se confirmó como exitoso.');
+        return;
+      }
+      await finishPayment(paymentIntentId);
+    } catch (e: any) {
+      Alert.alert('Error al procesar el pago', e?.message ?? 'No se pudo conectar con la pasarela de pago.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePay() {
+    if (selected === 'card') {
+      await handlePayWithCard();
+      return;
+    }
+    setLoading(true);
+    await finishPayment();
+    setLoading(false);
   }
 
   return (
@@ -128,6 +171,22 @@ export default function PaymentScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {selected === 'card' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Datos de la tarjeta</Text>
+            <Text style={styles.cardHint}>
+              Pasarela real de Stripe en modo de pruebas. Usa 4242 4242 4242 4242, cualquier fecha futura y CVC.
+            </Text>
+            <CardField
+              postalCodeEnabled={false}
+              placeholders={{ number: '4242 4242 4242 4242' }}
+              cardStyle={{ backgroundColor: Colors.surface, textColor: Colors.text, borderRadius: 12 }}
+              style={styles.cardField}
+              onCardChange={(details) => setCardComplete(details.complete)}
+            />
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -181,6 +240,8 @@ const styles = StyleSheet.create({
   },
   radioSelected: { borderColor: Colors.primary },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
+  cardHint: { color: Colors.textMuted, fontSize: FontSize.xs, marginBottom: Spacing.sm, lineHeight: 16 },
+  cardField: { width: '100%', height: 50 },
   footer: { padding: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.border },
   payBtn: {
     backgroundColor: Colors.primary, borderRadius: Radius.full, padding: Spacing.md,

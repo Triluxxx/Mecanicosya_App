@@ -91,6 +91,12 @@ export const ApiClient = {
       body: JSON.stringify({ status, note }),
     }),
 
+  createPaymentIntent: (data: { amount: number; currency?: string }) =>
+    request<{ clientSecret: string; paymentIntentId: string }>('/payments/intent', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   createPayment: (data: {
     sosId?: string;
     userId: string;

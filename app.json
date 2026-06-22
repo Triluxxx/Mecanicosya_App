@@ -38,7 +38,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Necesitamos tu ubicación para encontrar mecánicos cercanos."
         }
-      ]
+      ],
+      "@stripe/stripe-react-native"
     ],
     "extra": {
       "eas": {
