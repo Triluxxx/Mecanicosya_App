@@ -39,7 +39,13 @@
           "locationAlwaysAndWhenInUsePermission": "Necesitamos tu ubicación para encontrar mecánicos cercanos."
         }
       ],
-      "@stripe/stripe-react-native"
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.mecanicosya.app",
+          "enableGooglePay": false
+        }
+      ]
     ],
     "extra": {
       "eas": {
