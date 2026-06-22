@@ -12,9 +12,6 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return Number((2 * R * Math.asin(Math.sqrt(h))).toFixed(2));
 }
 
-// El backend (users_app) todavía no guarda specialties/pricePerHour/yearsExperience/
-// vehicleTypes/bio/rating/totalReviews — se completan con valores por defecto hasta
-// que el contrato se extienda.
 function toDomainMechanic(u: ApiUser, fromLocation?: { lat: number; lng: number }): Mechanic {
   const plan: MechanicPlan = u.plan === 'expert' ? 'expert' : 'basic';
   const distanceKm = fromLocation && u.location ? haversineKm(fromLocation, u.location) : 0;
@@ -24,20 +21,20 @@ function toDomainMechanic(u: ApiUser, fromLocation?: { lat: number; lng: number 
     name: u.name,
     photo: u.photoUrl || '',
     phone: u.phone,
-    rating: 5,
-    totalReviews: 0,
-    specialties: [],
+    rating: u.rating ?? 5,
+    totalReviews: u.totalReviews ?? 0,
+    specialties: u.specialties ?? [],
     status: u.available ? 'available' : 'offline',
     location: { latitude: u.location?.lat ?? 0, longitude: u.location?.lng ?? 0 },
     distanceKm,
     etaMinutes: Math.max(5, Math.round(distanceKm * 4)),
-    pricePerHour: 0,
-    yearsExperience: 0,
-    vehicleTypes: [],
-    bio: '',
+    pricePerHour: u.pricePerHour ?? 0,
+    yearsExperience: u.yearsExperience ?? 0,
+    vehicleTypes: u.vehicleTypes ?? [],
+    bio: u.bio ?? '',
     plan,
-    hasTowingVehicle: Boolean(u.plate),
-    towingPlate: u.plate ?? undefined,
+    hasTowingVehicle: u.hasTowingVehicle ?? Boolean(u.plate),
+    towingPlate: u.towingPlate ?? u.plate ?? undefined,
     badge: u.badge ?? undefined,
   };
 }

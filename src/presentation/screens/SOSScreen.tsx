@@ -28,8 +28,6 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return Number((2 * R * Math.asin(Math.sqrt(h))).toFixed(1));
 }
 
-// El backend (mecanicosya-backend) todavía no guarda specialties/precio/bio —
-// se completan con valores por defecto hasta que se extienda ese esquema.
 function apiMechanicToLocalUser(
   u: ApiUser,
   fromLocation?: { lat: number; lng: number }
@@ -43,22 +41,22 @@ function apiMechanicToLocalUser(
     email: '',
     photo: u.photoUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name),
     vehicle: '',
-    ruc: '',
+    ruc: u.ruc ?? '',
     verified: u.verified,
-    specialties: [],
-    yearsExperience: 0,
-    pricePerHour: 0,
-    bio: '',
-    vehicleTypes: [],
+    specialties: u.specialties ?? [],
+    yearsExperience: u.yearsExperience ?? 0,
+    pricePerHour: u.pricePerHour ?? 0,
+    bio: u.bio ?? '',
+    vehicleTypes: u.vehicleTypes ?? [],
     latitude: u.location?.lat ?? 0,
     longitude: u.location?.lng ?? 0,
     status: u.available ? 'online' : 'offline',
-    rating: 5,
-    totalReviews: 0,
+    rating: u.rating ?? 5,
+    totalReviews: u.totalReviews ?? 0,
     totalServices: 0,
     plan: u.plan,
-    hasTowingVehicle: Boolean(u.plate),
-    towingPlate: u.plate ?? '',
+    hasTowingVehicle: u.hasTowingVehicle ?? Boolean(u.plate),
+    towingPlate: u.towingPlate ?? u.plate ?? '',
     badge: u.badge ?? '',
     backendId: u.id,
     createdAt: u.createdAt,
@@ -156,6 +154,11 @@ export default function SOSScreen() {
                   address: loc.address,
                   location: { lat: loc.latitude, lng: loc.longitude },
                 });
+              })
+              .then((result) => {
+                if (result?.sos?.id) {
+                  return DB.updateRequest(req.id, { backendSosId: result.sos.id });
+                }
               })
               .catch((e) => console.warn('No se pudo replicar el SOS en el backend real:', e));
 

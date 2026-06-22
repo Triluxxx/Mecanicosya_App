@@ -90,9 +90,13 @@ export class ServiceRequestRepositoryRemoteImpl implements IServiceRequestReposi
     });
   }
 
-  async submitReview(_id: string, _review: Omit<Review, 'id' | 'createdAt'>): Promise<void> {
-    throw new Error(
-      'El backend todavía no tiene un endpoint de reseñas — falta agregarlo (tabla reviews + POST /reviews)'
-    );
+  async submitReview(id: string, review: Omit<Review, 'id' | 'createdAt'>): Promise<void> {
+    await ApiClient.createReview({
+      sosId: id,
+      mechanicId: review.mechanicId,
+      driverId: review.userId,
+      rating: review.rating,
+      comment: review.comment,
+    });
   }
 }

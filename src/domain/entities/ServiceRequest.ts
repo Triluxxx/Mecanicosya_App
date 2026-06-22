@@ -21,6 +21,7 @@ export interface ServiceRequest {
   userAddress: string;
   mechanicLocation?: { latitude: number; longitude: number };
   etaMinutes?: number;
+  backendSosId?: string;
   createdAt: string;
   acceptedAt?: string;
   inRouteAt?: string;

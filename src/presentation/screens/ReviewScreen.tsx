@@ -12,6 +12,8 @@ import { Colors } from '../theme/colors';
 import { Spacing, Radius, FontSize } from '../theme/spacing';
 import StarRating from '../components/StarRating';
 import * as DB from '../../data/local/Database';
+import { ApiClient } from '../../data/remote/ApiClient';
+import { useAuthStore } from '../../store/useAuthStore';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Review'>;
@@ -26,6 +28,7 @@ export default function ReviewScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { requestId, mechanicName } = route.params;
+  const { syncBackendId } = useAuthStore();
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -45,6 +48,25 @@ export default function ReviewScreen() {
     }
     setLoading(true);
     await DB.updateRequest(requestId, { rating, review: comment });
+
+    // Espejo de la reseña en el backend real, sin bloquear si falla o si no hay SOS real vinculado
+    const req = await DB.getRequestById(requestId);
+    if (req?.backendSosId) {
+      syncBackendId()
+        .then(async (driverId) => {
+          if (!driverId) return;
+          const mechanic = await DB.findUserById(req.mechanicId);
+          return ApiClient.createReview({
+            sosId: req.backendSosId!,
+            mechanicId: mechanic?.backendId ?? req.mechanicId,
+            driverId,
+            rating,
+            comment: comment.trim() || undefined,
+          });
+        })
+        .catch((e) => console.warn('No se pudo replicar la reseña en el backend real:', e));
+    }
+
     setLoading(false);
 
     Alert.alert(

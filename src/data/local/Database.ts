@@ -46,6 +46,7 @@ export interface ServiceRequest {
   userAddress: string;
   mechanicLocation?: { latitude: number; longitude: number };
   etaMinutes?: number;
+  backendSosId?: string;
   estimatedCost: number;
   finalCost?: number;
   paymentMethod?: 'cash' | 'card' | 'transfer' | 'yape' | 'plin';

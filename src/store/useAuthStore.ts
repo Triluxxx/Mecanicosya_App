@@ -148,11 +148,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!current) return null;
     if (current.backendId) return current.backendId;
     try {
+      const isMechanic = current.role === 'mechanic';
       const { user: apiUser } = await ApiClient.authDemo({
-        role: current.role === 'mechanic' ? 'mechanic' : 'driver',
+        role: isMechanic ? 'mechanic' : 'driver',
         name: current.name,
         phone: current.phone,
         location,
+        plan: current.plan,
+        ...(isMechanic && {
+          specialties: current.specialties,
+          vehicleTypes: current.vehicleTypes,
+          ruc: current.ruc,
+          pricePerHour: current.pricePerHour,
+          yearsExperience: current.yearsExperience,
+          bio: current.bio,
+          hasTowingVehicle: current.hasTowingVehicle,
+          towingPlate: current.towingPlate,
+        }),
       });
       const updated = await DB.updateUser(current.id, { backendId: apiUser.id });
       if (updated) {

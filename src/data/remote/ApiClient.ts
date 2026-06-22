@@ -29,6 +29,38 @@ export interface ApiUser {
   photoUrl: string | null;
   location: ApiLocation | null;
   available: boolean;
+  specialties: string[];
+  vehicleTypes: string[];
+  ruc: string | null;
+  pricePerHour: number;
+  yearsExperience: number;
+  bio: string | null;
+  rating: number;
+  totalReviews: number;
+  hasTowingVehicle: boolean;
+  towingPlate: string | null;
+  createdAt: string;
+}
+
+export interface ApiPart {
+  id: string;
+  mechanicId: string;
+  name: string;
+  category: 'llanta' | 'camara' | 'cadena' | 'aceite' | 'frenos' | 'otro';
+  price: number;
+  stock: number;
+  photoUrl: string | null;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface ApiReview {
+  id: string;
+  sosId: string;
+  mechanicId: string;
+  driverId: string;
+  rating: number;
+  comment: string | null;
   createdAt: string;
 }
 
@@ -71,7 +103,21 @@ export const ApiClient = {
 
   getMechanics: () => request<ApiUser[]>('/mechanics'),
 
-  authDemo: (data: { role: 'driver' | 'mechanic'; name?: string; phone?: string; location?: ApiLocation }) =>
+  authDemo: (data: {
+    role: 'driver' | 'mechanic';
+    name?: string;
+    phone?: string;
+    location?: ApiLocation;
+    plan?: ApiUser['plan'];
+    specialties?: string[];
+    vehicleTypes?: string[];
+    ruc?: string;
+    pricePerHour?: number;
+    yearsExperience?: number;
+    bio?: string;
+    hasTowingVehicle?: boolean;
+    towingPlate?: string;
+  }) =>
     request<{ token: string; user: ApiUser }>('/auth/demo', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -130,4 +176,33 @@ export const ApiClient = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  getParts: (category?: string) =>
+    request<ApiPart[]>(category ? `/parts?category=${encodeURIComponent(category)}` : '/parts'),
+
+  getMechanicParts: (mechanicId: string) =>
+    request<ApiPart[]>(`/mechanics/${mechanicId}/parts`),
+
+  createPart: (data: {
+    mechanicId: string;
+    name: string;
+    category: ApiPart['category'];
+    price: number;
+    stock: number;
+    photoUrl?: string;
+    description?: string;
+  }) =>
+    request<ApiPart>('/parts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  createReview: (data: { sosId: string; mechanicId: string; driverId: string; rating: number; comment?: string }) =>
+    request<ApiReview>('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getMechanicReviews: (mechanicId: string) =>
+    request<ApiReview[]>(`/mechanics/${mechanicId}/reviews`),
 };
