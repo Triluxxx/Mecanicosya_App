@@ -45,6 +45,13 @@
           "merchantIdentifier": "merchant.com.mecanicosya.app",
           "enableGooglePay": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF6B35"
+        }
       ]
     ],
     "extra": {

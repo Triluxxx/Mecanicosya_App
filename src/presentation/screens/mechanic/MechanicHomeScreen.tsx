@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Switch, Image,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Switch, Image, Platform, Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Notifications from 'expo-notifications';
 
 import { RootStackParamList } from '../../navigation/types';
 import { Colors } from '../../theme/colors';
@@ -15,23 +16,69 @@ import * as DB from '../../../data/local/Database';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export default function MechanicHomeScreen() {
   const navigation = useNavigation<Nav>();
   const { user, refreshUser, updateProfile } = useAuthStore();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [isOnline, setIsOnline] = useState(user?.status === 'online');
   const [loading, setLoading] = useState(true);
+  const seenPendingIds = useRef<Set<string>>(new Set());
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
+    Notifications.requestPermissionsAsync();
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'Solicitudes',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: 'default',
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    isFirstLoad.current = true;
+    seenPendingIds.current = new Set();
     loadRequests();
     const interval = setInterval(loadRequests, 5000);
     return () => clearInterval(interval);
   }, [user]);
 
+  async function notifyNewRequest(req: ServiceRequest) {
+    Vibration.vibrate([0, 300, 150, 300]);
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🔔 Nueva solicitud de servicio',
+        body: `${req.problemDescription} · 📍 ${req.userAddress ?? 'Ubicación no disponible'}`,
+        sound: 'default',
+      },
+      trigger: null,
+    });
+  }
+
   async function loadRequests() {
     if (!user) return;
     const all = await DB.getHistory(user.id);
     const pending = all.filter((r) => r.status !== 'completed' && r.status !== 'cancelled');
+    const pendingNow = pending.filter((r) => r.status === 'pending');
+
+    if (!isFirstLoad.current) {
+      const newOnes = pendingNow.filter((r) => !seenPendingIds.current.has(r.id));
+      newOnes.forEach(notifyNewRequest);
+    }
+    isFirstLoad.current = false;
+    pendingNow.forEach((r) => seenPendingIds.current.add(r.id));
+
     setRequests(pending);
     setLoading(false);
   }
