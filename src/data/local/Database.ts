@@ -44,6 +44,8 @@ export interface ServiceRequest {
   problemDescription: string;
   userLocation: { latitude: number; longitude: number };
   userAddress: string;
+  mechanicLocation?: { latitude: number; longitude: number };
+  etaMinutes?: number;
   estimatedCost: number;
   finalCost?: number;
   paymentMethod?: 'cash' | 'card' | 'transfer' | 'yape' | 'plin';
@@ -51,6 +53,8 @@ export interface ServiceRequest {
   rating?: number;
   review?: string;
   createdAt: string;
+  acceptedAt?: string;
+  inRouteAt?: string;
   completedAt?: string;
 }
 
@@ -214,162 +218,4 @@ export async function getCurrentUser(): Promise<User | null> {
 
 export async function logout(): Promise<void> {
   await AsyncStorage.removeItem(KEYS.CURRENT_USER);
-}
-
-// ─── Datos iniciales (mecánicos demo) ───
-export async function seedDemoMechanics(): Promise<void> {
-  const users = await getUsers();
-  const hasMechanics = users.some((u) => u.role === 'mechanic');
-  if (hasMechanics) return;
-
-  const demoMechanics: Partial<User>[] = [
-    {
-      phone: '+51 987011111',
-      role: 'mechanic',
-      name: 'Carlos Mendoza',
-      photo: 'https://randomuser.me/api/portraits/men/32.jpg',
-      ruc: '12345678901234',
-      verified: true,
-      specialties: ['Motor', 'Transmisión', 'Frenos'],
-      yearsExperience: 12,
-      pricePerHour: 80,
-      bio: 'Mecánico certificado de motos con más de 12 años de experiencia. Especialista en motos deportivas y touring.',
-      vehicleTypes: ['Deportiva', 'Touring', 'Naked', 'Custom'],
-      latitude: -6.4888,
-      longitude: -76.3603,
-      status: 'online',
-      rating: 4.9,
-      totalReviews: 127,
-      totalServices: 0,
-      plan: 'expert',
-      hasTowingVehicle: true,
-      towingPlate: 'F8G-321',
-      badge: 'FORMAL',
-    },
-    {
-      phone: '+51 987022222',
-      role: 'mechanic',
-      name: 'Roberto Flores',
-      photo: 'https://randomuser.me/api/portraits/men/45.jpg',
-      ruc: '',
-      verified: false,
-      specialties: ['Electricidad', 'Diagnóstico', 'Inyección'],
-      yearsExperience: 8,
-      pricePerHour: 70,
-      bio: 'Especialista en sistemas eléctricos de motos. Diagnóstico con scanner profesional.',
-      vehicleTypes: ['Deportiva', 'Scooter', 'Enduro', 'Naked'],
-      latitude: -6.4920,
-      longitude: -76.3590,
-      status: 'online',
-      rating: 4.7,
-      totalReviews: 89,
-      totalServices: 0,
-      plan: 'basic',
-      hasTowingVehicle: false,
-      towingPlate: '',
-      badge: '',
-    },
-    {
-      phone: '+51 987033333',
-      role: 'mechanic',
-      name: 'Miguel Quispe',
-      photo: 'https://randomuser.me/api/portraits/men/58.jpg',
-      ruc: '98765432109876',
-      verified: true,
-      specialties: ['Llantas', 'Suspensión', 'Alineación', 'Cadena'],
-      yearsExperience: 15,
-      pricePerHour: 65,
-      bio: 'El más experimentado en suspensión y transmisión de motos. Atiendo todo tipo de motocicletas.',
-      vehicleTypes: ['Todos los tipos', 'Enduro', 'Custom', 'Scooter', 'Naked'],
-      latitude: -6.4870,
-      longitude: -76.3545,
-      status: 'online',
-      rating: 4.8,
-      totalReviews: 203,
-      totalServices: 0,
-      plan: 'expert',
-      hasTowingVehicle: true,
-      towingPlate: 'ABC-123',
-      badge: 'VIP',
-    },
-    {
-      phone: '+51 987044444',
-      role: 'mechanic',
-      name: 'Andrés Torrico',
-      photo: 'https://randomuser.me/api/portraits/men/22.jpg',
-      ruc: '',
-      verified: false,
-      specialties: ['Motor 2T', 'Carburador', 'Cambio de aceite'],
-      yearsExperience: 5,
-      pricePerHour: 55,
-      bio: 'Joven mecánico especializado en motos de baja cilindrada. Puntual y responsable.',
-      vehicleTypes: ['Scooter', 'Naked', 'Custom', 'Enduro'],
-      latitude: -6.4940,
-      longitude: -76.3610,
-      status: 'online',
-      rating: 4.5,
-      totalReviews: 54,
-      totalServices: 0,
-      plan: 'basic',
-      hasTowingVehicle: false,
-      towingPlate: '',
-      badge: '',
-    },
-    {
-      phone: '+51 987055555',
-      role: 'mechanic',
-      name: 'Jorge Vargas',
-      photo: 'https://randomuser.me/api/portraits/men/71.jpg',
-      ruc: '45678901234567',
-      verified: true,
-      specialties: ['Motor 4T', 'Inyección electrónica', 'Reprogramación'],
-      yearsExperience: 18,
-      pricePerHour: 95,
-      bio: 'Especialista en motos de alta gama y competición. Diagnóstico y reprogramación de centralitas.',
-      vehicleTypes: ['Deportiva', 'Touring', 'Naked'],
-      latitude: -6.4850,
-      longitude: -76.3530,
-      status: 'online',
-      rating: 4.6,
-      totalReviews: 142,
-      totalServices: 0,
-      plan: 'basic',
-      hasTowingVehicle: false,
-      towingPlate: '',
-      badge: '',
-    },
-  ];
-
-  // Create demo mechanics
-  const now = new Date().toISOString();
-  for (const m of demoMechanics) {
-    users.push({
-      id: generateId(),
-      phone: m.phone!,
-      role: m.role!,
-      name: m.name!,
-      email: '',
-      photo: m.photo!,
-      vehicle: '',
-      ruc: m.ruc!,
-      verified: m.verified!,
-      specialties: m.specialties!,
-      yearsExperience: m.yearsExperience!,
-      pricePerHour: m.pricePerHour!,
-      bio: m.bio!,
-      vehicleTypes: m.vehicleTypes!,
-      latitude: m.latitude!,
-      longitude: m.longitude!,
-      status: m.status as 'online',
-      rating: m.rating!,
-      totalReviews: m.totalReviews!,
-      totalServices: 0,
-      plan: m.plan ?? 'basic',
-      hasTowingVehicle: m.hasTowingVehicle ?? false,
-      towingPlate: m.towingPlate ?? '',
-      badge: m.badge ?? '',
-      createdAt: now,
-    });
-  }
-  await saveUsers(users);
 }

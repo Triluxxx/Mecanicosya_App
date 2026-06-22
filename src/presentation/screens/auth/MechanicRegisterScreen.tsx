@@ -11,19 +11,10 @@ import { RootStackParamList } from '../../navigation/types';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, FontSize } from '../../theme/spacing';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { SPECIALTIES_LIST, VEHICLE_TYPES } from '../../constants/mechanicOptions';
+import { UserPlan } from '../../../data/local/Database';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-const SPECIALTIES_LIST = [
-  'Motor 4T', 'Motor 2T', 'Electricidad', 'Frenos', 'Suspensión',
-  'Llantas', 'Cadena/Transmisión', 'Carburador', 'Inyección', 'Diagnóstico',
-  'Reprogramación', 'Cambio de aceite', 'Alineación',
-];
-
-const VEHICLE_TYPES = [
-  'Deportiva', 'Naked', 'Touring', 'Custom/Chopper',
-  'Scooter', 'Enduro/Trail', 'Motomoto', 'Todos los tipos',
-];
 
 export default function MechanicRegisterScreen() {
   const navigation = useNavigation<Nav>();
@@ -38,6 +29,7 @@ export default function MechanicRegisterScreen() {
   const [bio, setBio] = useState('');
   const [hasTowingVehicle, setHasTowingVehicle] = useState(false);
   const [towingPlate, setTowingPlate] = useState('');
+  const [plan, setPlan] = useState<UserPlan>('basic');
   const [loading, setLoading] = useState(false);
 
   function toggleSpecialty(s: string) {
@@ -50,6 +42,11 @@ export default function MechanicRegisterScreen() {
     setVehicleTypes((prev) =>
       prev.includes(v) ? prev.filter((t) => t !== v) : [...prev, v]
     );
+  }
+
+  function handleToggleTowing(value: boolean) {
+    setHasTowingVehicle(value);
+    if (!value) setPlan('basic');
   }
 
   async function handleSubmit() {
@@ -72,6 +69,7 @@ export default function MechanicRegisterScreen() {
       bio: bio.trim(),
       hasTowingVehicle,
       towingPlate: towingPlate.trim(),
+      plan,
     });
     setLoading(false);
     // Navigation handled by auth store (user.role === 'mechanic')
@@ -165,7 +163,7 @@ export default function MechanicRegisterScreen() {
             </View>
             <Switch
               value={hasTowingVehicle}
-              onValueChange={setHasTowingVehicle}
+              onValueChange={handleToggleTowing}
               trackColor={{ false: Colors.border, true: Colors.primary }}
               thumbColor={Colors.white}
             />
@@ -179,6 +177,35 @@ export default function MechanicRegisterScreen() {
               value={towingPlate}
               onChangeText={setTowingPlate}
             />
+          )}
+
+          {/* Tipo de cuenta */}
+          <Text style={styles.label}>Tipo de cuenta</Text>
+          <View style={styles.rowInputs}>
+            <TouchableOpacity
+              style={[styles.tag, { flex: 1, alignItems: 'center' }, plan === 'basic' && styles.tagSelected]}
+              onPress={() => setPlan('basic')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tagText, plan === 'basic' && styles.tagTextSelected]}>🔧 Normal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tag, { flex: 1, alignItems: 'center' },
+                plan === 'expert' && styles.tagSelected,
+                !hasTowingVehicle && styles.tagDisabled,
+              ]}
+              onPress={() => hasTowingVehicle && setPlan('expert')}
+              activeOpacity={0.8}
+              disabled={!hasTowingVehicle}
+            >
+              <Text style={[styles.tagText, plan === 'expert' && styles.tagTextSelected]}>⭐ Experto</Text>
+            </TouchableOpacity>
+          </View>
+          {!hasTowingVehicle && (
+            <Text style={styles.labelHintGray}>
+              Activa el vehículo de carga/grúa para habilitar el plan Experto
+            </Text>
           )}
 
           {/* Años y precio */}
@@ -297,6 +324,7 @@ const styles = StyleSheet.create({
   },
   tagText: { color: Colors.textSecondary, fontSize: FontSize.xs, fontWeight: '600' },
   tagTextSelected: { color: Colors.primary },
+  tagDisabled: { opacity: 0.4 },
   rowInputs: { flexDirection: 'row', gap: Spacing.sm },
   submitBtn: {
     backgroundColor: Colors.primary,

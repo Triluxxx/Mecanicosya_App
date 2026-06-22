@@ -11,7 +11,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, FontSize } from '../../theme/spacing';
 import { useAuthStore } from '../../../store/useAuthStore';
-import { UserRole } from '../../../data/local/Database';
+import { UserRole, UserPlan } from '../../../data/local/Database';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Register'>;
@@ -19,12 +19,13 @@ type Route = RouteProp<RootStackParamList, 'Register'>;
 export default function RegisterScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { phone } = route.params;
+  const { phone, role: presetRole } = route.params;
   const { register } = useAuthStore();
 
   const [name, setName] = useState('');
-  const [role, setRole] = useState<UserRole>('client');
+  const [role, setRole] = useState<UserRole>(presetRole ?? 'client');
   const [vehicle, setVehicle] = useState('');
+  const [plan, setPlan] = useState<UserPlan>('free');
   const [loading, setLoading] = useState(false);
 
   async function handleRegister() {
@@ -39,6 +40,7 @@ export default function RegisterScreen() {
       role,
       name: name.trim(),
       vehicle: role === 'client' ? vehicle.trim() : '',
+      plan: role === 'client' ? plan : undefined,
     });
     setLoading(false);
 
@@ -64,32 +66,36 @@ export default function RegisterScreen() {
             </Text>
           </View>
 
-          {/* Role selector */}
-          <Text style={styles.sectionLabel}>Eres...</Text>
-          <View style={styles.roleRow}>
-            <TouchableOpacity
-              style={[styles.roleCard, role === 'client' && styles.roleSelected]}
-              onPress={() => setRole('client')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.roleIcon}>🏍️</Text>
-              <Text style={[styles.roleTitle, role === 'client' && { color: Colors.primary }]}>
-                Cliente
-              </Text>
-              <Text style={styles.roleDesc}>Tengo una moto y necesito mecánico</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.roleCard, role === 'mechanic' && styles.roleSelected]}
-              onPress={() => setRole('mechanic')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.roleIcon}>🔧</Text>
-              <Text style={[styles.roleTitle, role === 'mechanic' && { color: Colors.primary }]}>
-                Mecánico
-              </Text>
-              <Text style={styles.roleDesc}>Soy mecánico y quiero ofrecer mis servicios</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Role selector (solo si no vino preseleccionado desde el login) */}
+          {!presetRole && (
+            <>
+              <Text style={styles.sectionLabel}>Eres...</Text>
+              <View style={styles.roleRow}>
+                <TouchableOpacity
+                  style={[styles.roleCard, role === 'client' && styles.roleSelected]}
+                  onPress={() => setRole('client')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.roleIcon}>🏍️</Text>
+                  <Text style={[styles.roleTitle, role === 'client' && { color: Colors.primary }]}>
+                    Cliente
+                  </Text>
+                  <Text style={styles.roleDesc}>Tengo una moto y necesito mecánico</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.roleCard, role === 'mechanic' && styles.roleSelected]}
+                  onPress={() => setRole('mechanic')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.roleIcon}>🔧</Text>
+                  <Text style={[styles.roleTitle, role === 'mechanic' && { color: Colors.primary }]}>
+                    Mecánico
+                  </Text>
+                  <Text style={styles.roleDesc}>Soy mecánico y quiero ofrecer mis servicios</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
           {/* Name input */}
           <Text style={styles.sectionLabel}>Nombre completo</Text>
@@ -112,6 +118,28 @@ export default function RegisterScreen() {
                 value={vehicle}
                 onChangeText={setVehicle}
               />
+
+              <Text style={styles.sectionLabel}>Tipo de cuenta</Text>
+              <View style={styles.roleRow}>
+                <TouchableOpacity
+                  style={[styles.roleCard, plan === 'free' && styles.roleSelected]}
+                  onPress={() => setPlan('free')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.roleIcon}>🏍️</Text>
+                  <Text style={[styles.roleTitle, plan === 'free' && { color: Colors.primary }]}>Normal</Text>
+                  <Text style={styles.roleDesc}>SOS con asignación automática, gratis</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.roleCard, plan === 'premium' && styles.roleSelected]}
+                  onPress={() => setPlan('premium')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.roleIcon}>⭐</Text>
+                  <Text style={[styles.roleTitle, plan === 'premium' && { color: Colors.primary }]}>Premium</Text>
+                  <Text style={styles.roleDesc}>Prioridad en SOS y descuentos · S/. 15/mes</Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
 

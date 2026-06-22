@@ -5,11 +5,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Svg, { Circle, Line } from 'react-native-svg';
 
 import { RootStackParamList } from '../navigation/types';
 import { Colors } from '../theme/colors';
 import { Spacing, Radius, FontSize } from '../theme/spacing';
 import * as DB from '../../data/local/Database';
+import { ServiceRequest } from '../../data/local/Database';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Tracking'>;
@@ -22,24 +24,56 @@ const STATUS_STEPS = [
   { key: 'completed', label: 'Servicio completado', icon: '🎉' },
 ];
 
+const STEP_INDEX: Record<string, number> = {
+  pending: 0,
+  accepted: 1,
+  in_route: 2,
+  in_progress: 3,
+  completed: 4,
+};
+
+const MAP_W = 320;
+const MAP_H = 160;
+const PAD = 24;
+
+function projectPoints(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number }
+) {
+  const minLat = Math.min(a.latitude, b.latitude);
+  const maxLat = Math.max(a.latitude, b.latitude);
+  const minLng = Math.min(a.longitude, b.longitude);
+  const maxLng = Math.max(a.longitude, b.longitude);
+  const latRange = maxLat - minLat || 0.001;
+  const lngRange = maxLng - minLng || 0.001;
+
+  const toXY = (p: { latitude: number; longitude: number }) => ({
+    x: PAD + ((p.longitude - minLng) / lngRange) * (MAP_W - 2 * PAD),
+    y: PAD + (1 - (p.latitude - minLat) / latRange) * (MAP_H - 2 * PAD),
+  });
+
+  return { mechanicXY: toXY(a), clientXY: toXY(b) };
+}
+
 export default function TrackingScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { requestId } = route.params;
 
-  const [request, setRequest] = useState<any>(null);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [eta, setEta] = useState(12);
+  const [request, setRequest] = useState<ServiceRequest | null>(null);
+  const [now, setNow] = useState(Date.now());
   const dotAnim = useRef(new Animated.Value(0)).current;
+  const navigatedToPayment = useRef(false);
 
   useEffect(() => {
     loadRequest();
+    const pollTimer = setInterval(loadRequest, 3000);
+    const clockTimer = setInterval(() => setNow(Date.now()), 5000);
+    return () => {
+      clearInterval(pollTimer);
+      clearInterval(clockTimer);
+    };
   }, []);
-
-  async function loadRequest() {
-    const req = await DB.getRequestById(requestId);
-    setRequest(req);
-  }
 
   useEffect(() => {
     Animated.loop(
@@ -48,34 +82,24 @@ export default function TrackingScreen() {
         Animated.timing(dotAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
       ])
     ).start();
-
-    const stepTimer = setInterval(() => {
-      setCurrentStep((s) => {
-        if (s < STATUS_STEPS.length - 1) {
-          const statusMap = ['pending', 'accepted', 'in_route', 'in_progress', 'completed'];
-          DB.updateRequest(requestId, { status: statusMap[s + 1] as any });
-          return s + 1;
-        }
-        clearInterval(stepTimer);
-        return s;
-      });
-    }, 4000);
-
-    const etaTimer = setInterval(() => {
-      setEta((e) => (e > 0 ? e - 1 : 0));
-    }, 60000);
-
-    return () => { clearInterval(stepTimer); clearInterval(etaTimer); };
   }, []);
 
+  async function loadRequest() {
+    const req = await DB.getRequestById(requestId);
+    setRequest(req);
+  }
+
   useEffect(() => {
-    if (currentStep === STATUS_STEPS.length - 1) {
+    if (request?.status === 'completed' && !navigatedToPayment.current) {
+      navigatedToPayment.current = true;
       setTimeout(() => {
-        const estimatedCost = request?.estimatedCost ?? 150;
-        navigation.replace('Payment', { requestId, estimatedCost });
-      }, 2000);
+        navigation.replace('Payment', {
+          requestId,
+          estimatedCost: request.estimatedCost ?? 150,
+        });
+      }, 1500);
     }
-  }, [currentStep]);
+  }, [request?.status]);
 
   function handleCancel() {
     Alert.alert(
@@ -96,6 +120,51 @@ export default function TrackingScreen() {
 
   const dotOpacity = dotAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
 
+  if (!request) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Seguimiento en vivo</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (request.status === 'cancelled') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.cancelledBox}>
+          <Text style={styles.mapEmoji}>❌</Text>
+          <Text style={styles.cancelledText}>Este servicio fue cancelado</Text>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.navigate('ClientTabs' as any)}>
+            <Text style={styles.cancelText}>Volver al inicio</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const currentStep = STEP_INDEX[request.status] ?? 0;
+
+  // Progreso del trayecto real (0 = en el punto de origen del mecánico, 1 = llegó)
+  let progress = 0;
+  if (request.status === 'in_route' && request.inRouteAt && request.etaMinutes) {
+    const elapsedMs = now - new Date(request.inRouteAt).getTime();
+    progress = Math.min(0.95, Math.max(0, elapsedMs / (request.etaMinutes * 60000)));
+  } else if (currentStep >= STEP_INDEX.in_progress) {
+    progress = 1;
+  }
+
+  const remainingMin =
+    request.status === 'in_route' && request.etaMinutes
+      ? Math.max(0, Math.ceil(request.etaMinutes * (1 - progress)))
+      : request.etaMinutes ?? 0;
+
+  const mechanicOrigin = request.mechanicLocation ?? request.userLocation;
+  const { mechanicXY, clientXY } = projectPoints(mechanicOrigin, request.userLocation);
+  const markerX = mechanicXY.x + (clientXY.x - mechanicXY.x) * progress;
+  const markerY = mechanicXY.y + (clientXY.y - mechanicXY.y) * progress;
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -105,28 +174,36 @@ export default function TrackingScreen() {
 
       <View style={styles.mapArea}>
         <View style={styles.mapBg}>
-          <Text style={styles.mapEmoji}>🗺️</Text>
-          <Text style={styles.mapSubtext}>Rastreando ubicación del mecánico</Text>
+          <Svg width={MAP_W} height={MAP_H}>
+            <Line
+              x1={mechanicXY.x} y1={mechanicXY.y}
+              x2={clientXY.x} y2={clientXY.y}
+              stroke={Colors.border}
+              strokeWidth={2}
+              strokeDasharray="6,6"
+            />
+            <Circle cx={clientXY.x} cy={clientXY.y} r={8} fill={Colors.sos} />
+            <Circle cx={markerX} cy={markerY} r={9} fill={Colors.primary} />
+          </Svg>
+          <Text style={styles.mapSubtext}>📍 Tú · 🏍️ Mecánico acercándose</Text>
         </View>
-        {currentStep < 4 && (
+        {currentStep < 3 && (
           <View style={styles.etaBadge}>
-            <Text style={styles.etaNumber}>{eta}</Text>
+            <Text style={styles.etaNumber}>{remainingMin}</Text>
             <Text style={styles.etaLabel}>min</Text>
           </View>
         )}
       </View>
 
-      {request && (
-        <View style={styles.mechanicCard}>
-          <Image source={{ uri: request.mechanicPhoto }} style={styles.mechanicPhoto} />
-          <View style={styles.mechanicInfo}>
-            <Text style={styles.mechanicName}>{request.mechanicName}</Text>
-            <Text style={styles.mechanicStatus}>
-              {STATUS_STEPS[currentStep].icon} {STATUS_STEPS[currentStep].label}
-            </Text>
-          </View>
+      <View style={styles.mechanicCard}>
+        <Image source={{ uri: request.mechanicPhoto }} style={styles.mechanicPhoto} />
+        <View style={styles.mechanicInfo}>
+          <Text style={styles.mechanicName}>{request.mechanicName}</Text>
+          <Text style={styles.mechanicStatus}>
+            {STATUS_STEPS[currentStep].icon} {STATUS_STEPS[currentStep].label}
+          </Text>
         </View>
-      )}
+      </View>
 
       <View style={styles.stepsContainer}>
         {STATUS_STEPS.map((step, i) => (
@@ -213,4 +290,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.sos, alignItems: 'center',
   },
   cancelText: { color: Colors.sos, fontSize: FontSize.sm, fontWeight: '700' },
+  cancelledBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl },
+  cancelledText: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '700' },
 });

@@ -84,12 +84,18 @@ export default function SOSScreen() {
   async function loadMechanics() {
     setLoading(true);
     const result = await DB.getAvailableMechanics();
-    // Calcular distancias simuladas para los mecánicos demo locales
-    const withDistances = result.map((m, i) => ({
-      ...m,
-      distanceKm: parseFloat((0.5 + i * 0.4 + Math.random() * 0.5).toFixed(1)),
-      etaMinutes: 5 + i * 3 + Math.floor(Math.random() * 10),
-    }));
+    // Distancia real entre la ubicación del cliente y la del mecánico registrado
+    const withDistances = result.map((m) => {
+      const distanceKm = haversineKm(
+        { lat: loc.latitude, lng: loc.longitude },
+        { lat: m.latitude, lng: m.longitude }
+      );
+      return {
+        ...m,
+        distanceKm,
+        etaMinutes: Math.max(5, Math.round(distanceKm * 4)),
+      };
+    });
 
     // Sumar mecánicos reales del backend (si está disponible), sin bloquear si falla
     let remoteMechanics: ReturnType<typeof apiMechanicToLocalUser>[] = [];
@@ -135,6 +141,8 @@ export default function SOSScreen() {
               problemDescription: problem,
               userLocation: { latitude: loc.latitude, longitude: loc.longitude },
               userAddress: loc.address,
+              mechanicLocation: { latitude: mechanic.latitude, longitude: mechanic.longitude },
+              etaMinutes: eta,
               estimatedCost,
               paymentStatus: 'pending',
             });

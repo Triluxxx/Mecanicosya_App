@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, UserRole } from '../data/local/Database';
+import { User, UserRole, UserPlan } from '../data/local/Database';
 import * as DB from '../data/local/Database';
 import { ApiClient } from '../data/remote/ApiClient';
 
@@ -13,7 +13,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   login: (phone: string, code: string) => Promise<{ success: boolean; isNewUser: boolean }>;
   sendOTP: (phone: string) => Promise<string>;
-  register: (data: { phone: string; role: UserRole; name: string; vehicle?: string }) => Promise<void>;
+  register: (data: { phone: string; role: UserRole; name: string; vehicle?: string; plan?: UserPlan }) => Promise<void>;
   registerMechanic: (data: {
     name: string;
     ruc: string;
@@ -24,6 +24,7 @@ interface AuthState {
     vehicleTypes: string[];
     hasTowingVehicle: boolean;
     towingPlate?: string;
+    plan?: UserPlan;
   }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -39,7 +40,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      await DB.seedDemoMechanics();
       const savedUser = await DB.getCurrentUser();
       if (savedUser) {
         set({
@@ -108,6 +108,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       vehicleTypes: data.vehicleTypes,
       hasTowingVehicle: data.hasTowingVehicle,
       towingPlate: data.hasTowingVehicle ? (data.towingPlate ?? '') : '',
+      plan: data.hasTowingVehicle ? (data.plan ?? 'basic') : 'basic',
     });
     if (updated) {
       await DB.saveCurrentUser(updated);

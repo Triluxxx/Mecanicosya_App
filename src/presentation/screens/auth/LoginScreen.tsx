@@ -12,15 +12,16 @@ import { RootStackParamList } from '../../navigation/types';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, FontSize } from '../../theme/spacing';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { UserRole } from '../../../data/local/Database';
 import Logo from '../../components/Logo';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function LoginScreen() {
   const navigation = useNavigation<Nav>();
-  const { sendOTP, login } = useAuthStore();
+  const { sendOTP } = useAuthStore();
   const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<UserRole | 'login' | null>(null);
 
   const formatPhone = (text: string) => {
     const digits = text.replace(/\D/g, '');
@@ -29,25 +30,40 @@ export default function LoginScreen() {
     return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)}`;
   };
 
-  async function handleSendCode() {
+  function getValidDigits(): string | null {
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 9) {
       Alert.alert('Error', 'Ingresa un número de celular válido');
-      return;
+      return null;
     }
-    setLoading(true);
+    return digits;
+  }
+
+  async function handleSendCode() {
+    const digits = getValidDigits();
+    if (!digits) return;
+    setLoading('login');
     const code = await sendOTP(`+51 ${digits}`);
-    setLoading(false);
+    setLoading(null);
     navigation.navigate('OTP', { phone: `+51 ${digits}`, code });
   }
 
-  async function handleQuickLogin(quickPhone: string) {
+  async function handleCreateAccount(role: UserRole) {
+    const digits = getValidDigits();
+    if (!digits) return;
+    setLoading(role);
+    const code = await sendOTP(`+51 ${digits}`);
+    setLoading(null);
+    navigation.navigate('OTP', { phone: `+51 ${digits}`, code, role });
+  }
+
+  async function handleQuickLogin(quickPhone: string, role: UserRole) {
     setPhone(quickPhone);
     const digits = quickPhone.replace(/\D/g, '');
-    setLoading(true);
+    setLoading(role);
     const code = await sendOTP(`+51 ${digits}`);
-    setLoading(false);
-    navigation.navigate('OTP', { phone: `+51 ${digits}`, code });
+    setLoading(null);
+    navigation.navigate('OTP', { phone: `+51 ${digits}`, code, role });
   }
 
   return (
@@ -81,42 +97,77 @@ export default function LoginScreen() {
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.sendBtn, loading && styles.sendBtnDisabled]}
-            onPress={handleSendCode}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <Text style={styles.sendBtnText}>Enviar código SMS</Text>
-            )}
-          </TouchableOpacity>
-
           <Text style={styles.hint}>
             Te enviaremos un código de 6 dígitos para verificar tu número
           </Text>
 
+          {/* Crear cuenta nueva */}
+          <Text style={styles.sectionLabel}>¿Nuevo en MecánicosYa? Crea tu cuenta</Text>
+          <View style={styles.createRow}>
+            <TouchableOpacity
+              style={styles.createBtn}
+              onPress={() => handleCreateAccount('client')}
+              disabled={!!loading}
+              activeOpacity={0.85}
+            >
+              {loading === 'client' ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <>
+                  <Text style={styles.createIcon}>🏍️</Text>
+                  <Text style={styles.createBtnText}>Crear cuenta de Cliente</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.createBtn, styles.createBtnMechanic]}
+              onPress={() => handleCreateAccount('mechanic')}
+              disabled={!!loading}
+              activeOpacity={0.85}
+            >
+              {loading === 'mechanic' ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : (
+                <>
+                  <Text style={styles.createIcon}>🔧</Text>
+                  <Text style={[styles.createBtnText, { color: Colors.primary }]}>Crear cuenta de Mecánico</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {/* Separador */}
           <View style={styles.separator}>
             <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>o prueba como</Text>
+            <Text style={styles.separatorText}>o</Text>
             <View style={styles.separatorLine} />
           </View>
+
+          <TouchableOpacity
+            style={[styles.sendBtn, loading && styles.sendBtnDisabled]}
+            onPress={handleSendCode}
+            disabled={!!loading}
+            activeOpacity={0.85}
+          >
+            {loading === 'login' ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.sendBtnText}>Ya tengo cuenta · Iniciar sesión</Text>
+            )}
+          </TouchableOpacity>
 
           {/* Quick login */}
           <View style={styles.quickRow}>
             <TouchableOpacity
               style={styles.quickBtn}
-              onPress={() => handleQuickLogin('900000001')}
+              onPress={() => handleQuickLogin('900000001', 'client')}
             >
               <Text style={styles.quickIcon}>👤</Text>
               <Text style={styles.quickLabel}>Cliente demo</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickBtn}
-              onPress={() => handleQuickLogin('987011111')}
+              onPress={() => handleQuickLogin('987011111', 'mechanic')}
             >
               <Text style={styles.quickIcon}>🔧</Text>
               <Text style={styles.quickLabel}>Mecánico demo</Text>
@@ -195,6 +246,30 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     textAlign: 'center',
   },
+  sectionLabel: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: Spacing.md,
+  },
+  createRow: { gap: Spacing.sm },
+  createBtn: {
+    flexDirection: 'row',
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.lg,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  createBtnMechanic: {
+    backgroundColor: Colors.surface,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  createIcon: { fontSize: 20 },
+  createBtnText: { color: Colors.white, fontSize: FontSize.md, fontWeight: '800' },
   separator: {
     flexDirection: 'row',
     alignItems: 'center',

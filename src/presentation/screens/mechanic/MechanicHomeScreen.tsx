@@ -42,9 +42,19 @@ export default function MechanicHomeScreen() {
   }
 
   async function handleAccept(requestId: string) {
-    await DB.updateRequest(requestId, { status: 'accepted' });
+    await DB.updateRequest(requestId, { status: 'accepted', acceptedAt: new Date().toISOString() });
     loadRequests();
     refreshUser();
+  }
+
+  async function handleSetInRoute(requestId: string) {
+    await DB.updateRequest(requestId, { status: 'in_route', inRouteAt: new Date().toISOString() });
+    loadRequests();
+  }
+
+  async function handleStartWork(requestId: string) {
+    await DB.updateRequest(requestId, { status: 'in_progress' });
+    loadRequests();
   }
 
   async function handleComplete(requestId: string) {
@@ -81,6 +91,21 @@ export default function MechanicHomeScreen() {
           />
         </View>
       </View>
+
+      {/* Plan */}
+      <TouchableOpacity
+        style={styles.planBanner}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('Benefits')}
+      >
+        <Text style={styles.planIcon}>{user?.plan === 'expert' ? '⭐' : '🔧'}</Text>
+        <Text style={styles.planText}>
+          Cuenta {user?.plan === 'expert' ? 'Experto' : 'Normal'}
+        </Text>
+        <Text style={styles.planAction}>
+          {user?.plan === 'expert' ? 'Ver beneficios' : 'Mejorar a Experto'} ›
+        </Text>
+      </TouchableOpacity>
 
       {/* Stats */}
       <View style={styles.statsRow}>
@@ -146,9 +171,25 @@ export default function MechanicHomeScreen() {
               {req.status === 'accepted' && (
                 <TouchableOpacity
                   style={styles.completeBtn}
+                  onPress={() => handleSetInRoute(req.id)}
+                >
+                  <Text style={styles.completeBtnText}>🏍️ Salir en camino</Text>
+                </TouchableOpacity>
+              )}
+              {req.status === 'in_route' && (
+                <TouchableOpacity
+                  style={styles.completeBtn}
+                  onPress={() => handleStartWork(req.id)}
+                >
+                  <Text style={styles.completeBtnText}>🔧 Llegué, iniciar reparación</Text>
+                </TouchableOpacity>
+              )}
+              {req.status === 'in_progress' && (
+                <TouchableOpacity
+                  style={styles.completeBtn}
                   onPress={() => handleComplete(req.id)}
                 >
-                  <Text style={styles.completeBtnText}>✅ Marcar como completado</Text>
+                  <Text style={styles.completeBtnText}>✅ Completar servicio</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -198,6 +239,21 @@ const styles = StyleSheet.create({
   subtitle: { color: Colors.textSecondary, fontSize: FontSize.sm, marginTop: 2 },
   onlineRow: { alignItems: 'center', gap: 4 },
   onlineLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  planBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.sm,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  planIcon: { fontSize: 18 },
+  planText: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '700', flex: 1 },
+  planAction: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: '700' },
   statsRow: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,

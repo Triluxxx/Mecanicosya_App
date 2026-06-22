@@ -18,7 +18,7 @@ type Route = RouteProp<RootStackParamList, 'OTP'>;
 export default function OTPScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { phone, code: demoCode } = route.params;
+  const { phone, code: demoCode, role } = route.params;
   const { login, sendOTP } = useAuthStore();
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -46,7 +46,7 @@ export default function OTPScreen() {
     setLoading(false);
     if (result.success) {
       if (result.isNewUser) {
-        navigation.replace('Register', { phone });
+        navigation.replace('Register', { phone, role });
       }
       // If existing user, auth store handles navigation via AppNavigator
     } else {
@@ -91,7 +91,7 @@ export default function OTPScreen() {
 
     if (result.success) {
       if (result.isNewUser) {
-        navigation.replace('Register', { phone });
+        navigation.replace('Register', { phone, role });
       }
     } else {
       Alert.alert('Código incorrecto', 'Revisa el código e intenta de nuevo.');

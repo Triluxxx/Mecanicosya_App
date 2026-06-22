@@ -19,8 +19,11 @@ export interface ServiceRequest {
   problemDescription: string;
   userLocation: { latitude: number; longitude: number };
   userAddress: string;
+  mechanicLocation?: { latitude: number; longitude: number };
+  etaMinutes?: number;
   createdAt: string;
   acceptedAt?: string;
+  inRouteAt?: string;
   completedAt?: string;
   estimatedCost: number;
   finalCost?: number;

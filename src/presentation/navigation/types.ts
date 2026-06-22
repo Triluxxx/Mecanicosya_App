@@ -1,10 +1,10 @@
-import { User } from '../../data/local/Database';
+import { User, UserRole } from '../../data/local/Database';
 
 // ─── Auth Stack ───
 export type AuthStackParamList = {
   Login: undefined;
-  OTP: { phone: string; code: string };
-  Register: { phone: string };
+  OTP: { phone: string; code: string; role?: UserRole };
+  Register: { phone: string; role?: UserRole };
   MechanicRegister: { phone: string };
 };
 
@@ -26,8 +26,8 @@ export type MechanicTabParamList = {
 export type RootStackParamList = {
   // Auth
   Login: undefined;
-  OTP: { phone: string; code: string };
-  Register: { phone: string };
+  OTP: { phone: string; code: string; role?: UserRole };
+  Register: { phone: string; role?: UserRole };
   MechanicRegister: { phone: string };
 
   // Client

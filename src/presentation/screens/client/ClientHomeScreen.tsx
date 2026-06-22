@@ -68,6 +68,21 @@ export default function ClientHomeScreen() {
           </View>
         </LinearGradient>
 
+        {/* Plan */}
+        <TouchableOpacity
+          style={styles.planBanner}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('Benefits')}
+        >
+          <Text style={styles.planIcon}>{user?.plan === 'premium' ? '⭐' : '🏍️'}</Text>
+          <Text style={styles.planText}>
+            Cuenta {user?.plan === 'premium' ? 'Premium' : 'Normal'}
+          </Text>
+          <Text style={styles.planAction}>
+            {user?.plan === 'premium' ? 'Ver beneficios' : 'Mejorar a Premium'} ›
+          </Text>
+        </TouchableOpacity>
+
         {/* SOS Section */}
         <View style={styles.sosSection}>
           <Text style={styles.sectionTitle}>¿Necesitas ayuda con tu moto?</Text>
@@ -96,6 +111,22 @@ export default function ClientHomeScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Repuestos */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.partsCard}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('Parts')}
+          >
+            <Text style={styles.partsIcon}>🛠️</Text>
+            <View style={styles.partsInfo}>
+              <Text style={styles.partsTitle}>Repuestos</Text>
+              <Text style={styles.partsDesc}>Llantas, cámaras, cadenas y más en venta</Text>
+            </View>
+            <Text style={styles.partsArrow}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Último servicio */}
@@ -156,6 +187,20 @@ const styles = StyleSheet.create({
   statValue: { color: Colors.primary, fontSize: FontSize.lg, fontWeight: '800' },
   statLabel: { color: Colors.textSecondary, fontSize: FontSize.xs, marginTop: 2 },
   statDivider: { width: 1, height: 30, backgroundColor: Colors.border },
+  planBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.sm,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  planIcon: { fontSize: 18 },
+  planText: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '700', flex: 1 },
+  planAction: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: '700' },
   sosSection: {
     alignItems: 'center',
     marginBottom: Spacing.xl,
@@ -196,6 +241,21 @@ const styles = StyleSheet.create({
   tipIcon: { fontSize: 28 },
   tipTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: '700' },
   tipDesc: { color: Colors.textSecondary, fontSize: FontSize.xs },
+  partsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: Spacing.md,
+  },
+  partsIcon: { fontSize: 28, width: 32, textAlign: 'center' },
+  partsInfo: { flex: 1 },
+  partsTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: '700' },
+  partsDesc: { color: Colors.textSecondary, fontSize: FontSize.xs, marginTop: 2 },
+  partsArrow: { color: Colors.textMuted, fontSize: 22 },
   lastCard: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,

@@ -13,6 +13,7 @@ import { Spacing, Radius, FontSize } from '../../theme/spacing';
 import StarRating from '../../components/StarRating';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { RootStackParamList } from '../../navigation/types';
+import { SPECIALTIES_LIST, VEHICLE_TYPES } from '../../constants/mechanicOptions';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,13 +26,27 @@ export default function MechanicProfileScreen() {
   const [name, setName] = useState(user?.name ?? '');
   const [pricePerHour, setPricePerHour] = useState(String(user?.pricePerHour ?? ''));
   const [bio, setBio] = useState(user?.bio ?? '');
+  const [specialties, setSpecialties] = useState<string[]>(user?.specialties ?? []);
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>(user?.vehicleTypes ?? []);
   const [isOnline, setIsOnline] = useState(user?.status === 'online');
 
+  function toggleSpecialty(s: string) {
+    setSpecialties((prev) => (prev.includes(s) ? prev.filter((t) => t !== s) : [...prev, s]));
+  }
+
+  function toggleVehicleType(v: string) {
+    setVehicleTypes((prev) => (prev.includes(v) ? prev.filter((t) => t !== v) : [...prev, v]));
+  }
+
   async function handleSave() {
+    if (specialties.length === 0) { Alert.alert('Error', 'Selecciona al menos una especialidad'); return; }
+    if (vehicleTypes.length === 0) { Alert.alert('Error', 'Selecciona al menos un tipo de moto'); return; }
     await updateProfile({
       name: name.trim(),
       pricePerHour: parseInt(pricePerHour) || 0,
       bio: bio.trim(),
+      specialties,
+      vehicleTypes,
       hasTowingVehicle,
       towingPlate: hasTowingVehicle ? towingPlate.trim() : '',
     });
@@ -114,6 +129,38 @@ export default function MechanicProfileScreen() {
               value={bio}
               onChangeText={setBio}
             />
+
+            <Text style={styles.label}>Especialidades</Text>
+            <View style={styles.tags}>
+              {SPECIALTIES_LIST.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.tagOption, specialties.includes(s) && styles.tagOptionSelected]}
+                  onPress={() => toggleSpecialty(s)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.tagOptionText, specialties.includes(s) && styles.tagOptionTextSelected]}>
+                    🔧 {s}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Tipos de moto que atiendo</Text>
+            <View style={styles.tags}>
+              {VEHICLE_TYPES.map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  style={[styles.tagOption, vehicleTypes.includes(v) && styles.tagOptionSelected]}
+                  onPress={() => toggleVehicleType(v)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.tagOptionText, vehicleTypes.includes(v) && styles.tagOptionTextSelected]}>
+                    🏍️ {v}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <View style={styles.towingRow}>
               <Text style={styles.label}>¿Cuentas con vehículo de carga/grúa?</Text>
@@ -376,6 +423,20 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   tagBlue: { backgroundColor: 'rgba(59,130,246,0.15)' },
+  tagOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  tagOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(255,107,53,0.15)',
+  },
+  tagOptionText: { color: Colors.textSecondary, fontSize: FontSize.xs, fontWeight: '600' },
+  tagOptionTextSelected: { color: Colors.primary },
   tagText: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '600' },
   bioText: { color: Colors.textSecondary, fontSize: FontSize.sm, lineHeight: 22 },
   planCard: {
