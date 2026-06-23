@@ -11,7 +11,11 @@ interface AuthState {
 
   // Acciones
   initialize: () => Promise<void>;
-  login: (phone: string, code: string) => Promise<{ success: boolean; isNewUser: boolean }>;
+  login: (
+    phone: string,
+    code: string,
+    expectedRole?: UserRole
+  ) => Promise<{ success: boolean; isNewUser: boolean; roleMismatch?: boolean; existingRole?: UserRole }>;
   sendOTP: (phone: string) => Promise<string>;
   quickDemoLogin: (role: UserRole) => Promise<void>;
   register: (data: { phone: string; role: UserRole; name: string; vehicle?: string; plan?: UserPlan }) => Promise<void>;
@@ -63,16 +67,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return code;
   },
 
-  login: async (phone: string, code: string) => {
+  login: async (phone: string, code: string, expectedRole?: UserRole) => {
     const isValid = await DB.verifyOTP(phone, code);
     if (!isValid) return { success: false, isNewUser: false };
 
-    let user = await DB.findUserByPhone(phone);
-    const isNewUser = !user;
+    const user = await DB.findUserByPhone(phone);
 
     if (!user) {
       // New user - needs registration
       return { success: true, isNewUser: true };
+    }
+
+    // El número ya tiene cuenta, pero de otro rol del que se pidió crear
+    // (ej. se intenta "Crear cuenta Mecánico" con un número que ya es Cliente).
+    // No lo logueamos en la cuenta equivocada en silencio.
+    if (expectedRole && user.role !== expectedRole) {
+      return { success: false, isNewUser: false, roleMismatch: true, existingRole: user.role };
     }
 
     // Existing user - log in
@@ -117,11 +127,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (data) => {
     const user = await DB.createUser(data);
+    if (data.role === 'mechanic') {
+      // Todavía falta completar especialidades/precio/bio en MechanicRegisterScreen.
+      // No autenticamos aún: si lo hiciéramos, AppNavigator saltaría directo al
+      // dashboard de mecánico y la pantalla de datos nunca se mostraría.
+      set({ user });
+      return;
+    }
     await DB.saveCurrentUser(user);
     set({
       user,
       isAuthenticated: true,
-      isMechanic: user.role === 'mechanic',
+      isMechanic: false,
     });
   },
 
@@ -143,7 +160,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     if (updated) {
       await DB.saveCurrentUser(updated);
-      set({ user: updated });
+      set({ user: updated, isAuthenticated: true, isMechanic: true });
     }
   },
 

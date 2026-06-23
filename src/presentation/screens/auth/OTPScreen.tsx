@@ -42,16 +42,26 @@ export default function OTPScreen() {
 
   async function handleAutoLogin() {
     setLoading(true);
-    const result = await login(phone, demoCode);
+    const result = await login(phone, demoCode, role);
     setLoading(false);
     if (result.success) {
       if (result.isNewUser) {
         navigation.replace('Register', { phone, role });
       }
       // If existing user, auth store handles navigation via AppNavigator
+    } else if (result.roleMismatch) {
+      showRoleMismatch(result.existingRole);
     } else {
       Alert.alert('Error', 'Código inválido. Intenta de nuevo.');
     }
+  }
+
+  function showRoleMismatch(existingRole?: 'client' | 'mechanic') {
+    Alert.alert(
+      'Este número ya tiene cuenta',
+      `${phone} ya está registrado como ${existingRole === 'mechanic' ? 'Mecánico' : 'Cliente'}. Usa otro número o inicia sesión normalmente con "Ya tengo cuenta".`,
+      [{ text: 'Entendido', onPress: () => navigation.navigate('Login') }]
+    );
   }
 
   function handleInputChange(text: string, index: number) {
@@ -86,13 +96,15 @@ export default function OTPScreen() {
       return;
     }
     setLoading(true);
-    const result = await login(phone, finalCode);
+    const result = await login(phone, finalCode, role);
     setLoading(false);
 
     if (result.success) {
       if (result.isNewUser) {
         navigation.replace('Register', { phone, role });
       }
+    } else if (result.roleMismatch) {
+      showRoleMismatch(result.existingRole);
     } else {
       Alert.alert('Código incorrecto', 'Revisa el código e intenta de nuevo.');
       setOtp(['', '', '', '', '', '']);
