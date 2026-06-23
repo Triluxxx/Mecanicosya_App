@@ -12,9 +12,22 @@ import { Colors } from '../theme/colors';
 import { Spacing, Radius, FontSize } from '../theme/spacing';
 import * as DB from '../../data/local/Database';
 import { ServiceRequest } from '../../data/local/Database';
+import { ApiClient, ApiSos } from '../../data/remote/ApiClient';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'Tracking'>;
+
+function backendStatusToLocal(status: ApiSos['status']): ServiceRequest['status'] {
+  switch (status) {
+    case 'accepted': return 'accepted';
+    case 'on_way': return 'in_route';
+    case 'in_progress': return 'in_progress';
+    case 'completed': return 'completed';
+    case 'rejected':
+    case 'cancelled': return 'cancelled';
+    default: return 'pending'; // 'searching' | 'assigned'
+  }
+}
 
 const STATUS_STEPS = [
   { key: 'pending', label: 'Solicitud enviada', icon: '📤' },
@@ -84,8 +97,29 @@ export default function TrackingScreen() {
     ).start();
   }, []);
 
+  // Si el mecánico está en otro celular, sus cambios de estado llegan por el backend real
+  // (no por el almacenamiento local de este dispositivo). Acá se reflejan en la solicitud local.
   async function loadRequest() {
-    const req = await DB.getRequestById(requestId);
+    let req = await DB.getRequestById(requestId);
+    if (req?.backendSosId && req.status !== 'completed' && req.status !== 'cancelled') {
+      try {
+        const list = await ApiClient.getSosList();
+        const sos = list.find((s) => s.id === req!.backendSosId);
+        if (sos) {
+          const mappedStatus = backendStatusToLocal(sos.status);
+          if (mappedStatus !== req.status) {
+            const updates: Partial<ServiceRequest> = { status: mappedStatus };
+            if (mappedStatus === 'accepted' && !req.acceptedAt) updates.acceptedAt = new Date().toISOString();
+            if (mappedStatus === 'in_route' && !req.inRouteAt) updates.inRouteAt = new Date().toISOString();
+            if (mappedStatus === 'completed' && !req.completedAt) updates.completedAt = new Date().toISOString();
+            await DB.updateRequest(req.id, updates);
+            req = await DB.getRequestById(requestId);
+          }
+        }
+      } catch (e) {
+        console.warn('No se pudo sincronizar el estado desde el backend real:', e);
+      }
+    }
     setRequest(req);
   }
 
@@ -111,6 +145,11 @@ export default function TrackingScreen() {
           text: 'Sí, cancelar', style: 'destructive',
           onPress: async () => {
             await DB.updateRequest(requestId, { status: 'cancelled' });
+            if (request?.backendSosId) {
+              ApiClient.updateSosStatus(request.backendSosId, 'cancelled').catch((e) =>
+                console.warn('No se pudo cancelar en el backend real:', e)
+              );
+            }
             navigation.navigate('ClientTabs' as any);
           },
         },

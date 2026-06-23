@@ -14,6 +14,7 @@ import StarRating from '../../components/StarRating';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { RootStackParamList } from '../../navigation/types';
 import { SPECIALTIES_LIST, VEHICLE_TYPES } from '../../constants/mechanicOptions';
+import { ApiClient } from '../../../data/remote/ApiClient';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -57,9 +58,13 @@ export default function MechanicProfileScreen() {
   async function toggleOnline(value: boolean) {
     setIsOnline(value);
     await updateProfile({ status: value ? 'online' : 'offline' });
-    if (value && user) {
-      // Por si la cuenta nunca se sincronizó con el backend (cuentas creadas antes de este fix).
-      syncBackendId({ lat: user.latitude, lng: user.longitude });
+    if (user) {
+      const backendId = await syncBackendId({ lat: user.latitude, lng: user.longitude });
+      if (backendId) {
+        ApiClient.setMechanicAvailability(backendId, value).catch((e) =>
+          console.warn('No se pudo actualizar disponibilidad en el backend real:', e)
+        );
+      }
     }
   }
 

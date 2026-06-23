@@ -121,7 +121,7 @@ export interface ApiSos {
   serviceTypeId: string | null;
   address: string;
   location: ApiLocation;
-  status: 'searching' | 'assigned' | 'accepted' | 'rejected' | 'on_way' | 'completed' | 'cancelled';
+  status: 'searching' | 'assigned' | 'accepted' | 'rejected' | 'on_way' | 'in_progress' | 'completed' | 'cancelled';
   mechanicId: string | null;
   mechanicDistanceKm: number | null;
   confirmationMethod: string;
@@ -156,13 +156,20 @@ export const ApiClient = {
       body: JSON.stringify(data),
     }),
 
-  createSos: (data: { driverId: string; serviceTypeId?: string; address?: string; location: ApiLocation }) =>
+  createSos: (data: { driverId: string; serviceTypeId?: string; address?: string; location: ApiLocation; mechanicId?: string }) =>
     request<{ sos: ApiSos; match: ApiSosMatch | null }>('/sos', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  getSosList: () => request<ApiSos[]>('/sos'),
+  getSosList: (mechanicId?: string) =>
+    request<ApiSos[]>(mechanicId ? `/sos?mechanicId=${encodeURIComponent(mechanicId)}` : '/sos'),
+
+  setMechanicAvailability: (id: string, available: boolean) =>
+    request<ApiUser>(`/mechanics/${id}/availability`, {
+      method: 'PATCH',
+      body: JSON.stringify({ available }),
+    }),
 
   updateSosStatus: (id: string, status: ApiSos['status'], note?: string) =>
     request<ApiSos>(`/sos/${id}/status`, {

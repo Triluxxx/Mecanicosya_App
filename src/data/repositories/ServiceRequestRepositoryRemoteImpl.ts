@@ -12,6 +12,7 @@ const STATUS_FROM_API: Record<ApiSos['status'], RequestStatus> = {
   accepted: 'accepted',
   rejected: 'cancelled',
   on_way: 'in_route',
+  in_progress: 'in_progress',
   completed: 'completed',
   cancelled: 'cancelled',
 };

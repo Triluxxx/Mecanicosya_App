@@ -145,7 +145,9 @@ export default function SOSScreen() {
               paymentStatus: 'pending',
             });
 
-            // Espejo del SOS en el backend real, sin bloquear el flujo local si falla
+            // Espejo del SOS en el backend real, sin bloquear el flujo local si falla.
+            // Si el mecánico tiene backendId, se lo asigna directo (no auto-match) para
+            // que le llegue la notificación en su propio celular.
             syncBackendId({ lat: loc.latitude, lng: loc.longitude })
               .then((driverId) => {
                 if (!driverId) return;
@@ -153,6 +155,7 @@ export default function SOSScreen() {
                   driverId,
                   address: loc.address,
                   location: { lat: loc.latitude, lng: loc.longitude },
+                  mechanicId: mechanic.backendId,
                 });
               })
               .then((result) => {

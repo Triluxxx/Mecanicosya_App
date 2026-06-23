@@ -13,8 +13,21 @@ import { Spacing, Radius, FontSize } from '../../theme/spacing';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { ServiceRequest } from '../../../data/local/Database';
 import * as DB from '../../../data/local/Database';
+import { ApiClient, ApiSos } from '../../../data/remote/ApiClient';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+function backendStatusToLocal(status: ApiSos['status']): ServiceRequest['status'] {
+  switch (status) {
+    case 'accepted': return 'accepted';
+    case 'on_way': return 'in_route';
+    case 'in_progress': return 'in_progress';
+    case 'completed': return 'completed';
+    case 'rejected':
+    case 'cancelled': return 'cancelled';
+    default: return 'pending'; // 'searching' | 'assigned'
+  }
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -66,8 +79,53 @@ export default function MechanicHomeScreen() {
     });
   }
 
+  // Trae del backend real las solicitudes asignadas a este mecánico y, si vienen de un
+  // celular distinto (no existen todavía en el almacenamiento local), las refleja como
+  // solicitudes locales nuevas. A partir de ahí, todo el flujo sigue siendo 100% local.
+  async function pullBackendRequests() {
+    if (!user) return;
+    const backendId = await syncBackendId({ lat: user.latitude, lng: user.longitude });
+    if (!backendId) return;
+    try {
+      const sosList = await ApiClient.getSosList(backendId);
+      const local = await DB.getHistory(user.id);
+      const known = new Set(local.map((r) => r.backendSosId).filter(Boolean));
+      for (const sos of sosList) {
+        if (known.has(sos.id)) continue;
+        await DB.createRequest({
+          userId: sos.driverId,
+          mechanicId: user.id,
+          mechanicName: user.name,
+          mechanicPhoto: user.photo,
+          status: backendStatusToLocal(sos.status),
+          problemDescription: 'Solicitud de servicio para moto',
+          userLocation: { latitude: sos.location.lat, longitude: sos.location.lng },
+          userAddress: sos.address,
+          mechanicLocation: { latitude: user.latitude, longitude: user.longitude },
+          etaMinutes: Math.max(5, Math.round((sos.mechanicDistanceKm ?? 1) * 4)),
+          backendSosId: sos.id,
+          estimatedCost: Math.round((user.pricePerHour || 70) * 1.5),
+          paymentStatus: 'pending',
+        });
+      }
+    } catch (e) {
+      console.warn('No se pudo traer solicitudes del backend real:', e);
+    }
+  }
+
+  // Si la solicitud vino del backend real (otro celular), también le manda el cambio de
+  // estado para que el cliente lo vea reflejado en su Tracking.
+  async function pushBackendStatus(requestId: string, backendStatus: ApiSos['status']) {
+    const req = await DB.getRequestById(requestId);
+    if (!req?.backendSosId) return;
+    ApiClient.updateSosStatus(req.backendSosId, backendStatus).catch((e) =>
+      console.warn('No se pudo actualizar el estado en el backend real:', e)
+    );
+  }
+
   async function loadRequests() {
     if (!user) return;
+    await pullBackendRequests();
     const all = await DB.getHistory(user.id);
     const pending = all.filter((r) => r.status !== 'completed' && r.status !== 'cancelled');
     const pendingNow = pending.filter((r) => r.status === 'pending');
@@ -86,36 +144,45 @@ export default function MechanicHomeScreen() {
   async function toggleOnline(value: boolean) {
     setIsOnline(value);
     await updateProfile({ status: value ? 'online' : 'offline' });
-    if (value && user) {
-      // Por si la cuenta nunca se sincronizó con el backend (cuentas creadas antes de este fix).
-      syncBackendId({ lat: user.latitude, lng: user.longitude });
+    if (user) {
+      const backendId = await syncBackendId({ lat: user.latitude, lng: user.longitude });
+      if (backendId) {
+        ApiClient.setMechanicAvailability(backendId, value).catch((e) =>
+          console.warn('No se pudo actualizar disponibilidad en el backend real:', e)
+        );
+      }
     }
   }
 
   async function handleAccept(requestId: string) {
     await DB.updateRequest(requestId, { status: 'accepted', acceptedAt: new Date().toISOString() });
+    pushBackendStatus(requestId, 'accepted');
     loadRequests();
     refreshUser();
   }
 
   async function handleSetInRoute(requestId: string) {
     await DB.updateRequest(requestId, { status: 'in_route', inRouteAt: new Date().toISOString() });
+    pushBackendStatus(requestId, 'on_way');
     loadRequests();
   }
 
   async function handleStartWork(requestId: string) {
     await DB.updateRequest(requestId, { status: 'in_progress' });
+    pushBackendStatus(requestId, 'in_progress');
     loadRequests();
   }
 
   async function handleComplete(requestId: string) {
     await DB.updateRequest(requestId, { status: 'completed', completedAt: new Date().toISOString() });
+    pushBackendStatus(requestId, 'completed');
     loadRequests();
     refreshUser();
   }
 
   async function handleCancel(requestId: string) {
     await DB.updateRequest(requestId, { status: 'cancelled' });
+    pushBackendStatus(requestId, 'rejected');
     loadRequests();
   }
 
