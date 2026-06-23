@@ -1,7 +1,40 @@
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const DEFAULT_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL_KEY = '@mecanicosya:apiUrl';
+
+let baseUrl = DEFAULT_BASE_URL;
+let loaded = false;
+
+async function ensureLoaded() {
+  if (loaded) return;
+  loaded = true;
+  const stored = await AsyncStorage.getItem(API_URL_KEY);
+  if (stored) baseUrl = stored;
+}
+
+export function getApiUrl(): string {
+  return baseUrl;
+}
+
+export function getDefaultApiUrl(): string {
+  return DEFAULT_BASE_URL;
+}
+
+export async function setApiUrl(url: string): Promise<void> {
+  const trimmed = url.trim().replace(/\/+$/, '');
+  baseUrl = trimmed || DEFAULT_BASE_URL;
+  loaded = true;
+  if (trimmed) {
+    await AsyncStorage.setItem(API_URL_KEY, trimmed);
+  } else {
+    await AsyncStorage.removeItem(API_URL_KEY);
+  }
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  await ensureLoaded();
+  const res = await fetch(`${baseUrl}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });

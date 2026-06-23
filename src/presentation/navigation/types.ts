@@ -45,4 +45,5 @@ export type RootStackParamList = {
 
   // Compartidas (cliente y mecánico)
   Benefits: undefined;
+  Settings: undefined;
 };

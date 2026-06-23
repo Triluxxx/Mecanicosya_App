@@ -38,6 +38,7 @@ import PaymentScreen from '../screens/PaymentScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import BenefitsScreen from '../screens/BenefitsScreen';
 import PartsScreen from '../screens/PartsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const ClientTab = createBottomTabNavigator<ClientTabParamList>();
@@ -195,6 +196,7 @@ export default function AppNavigator() {
               options={{ animation: 'slide_from_right' }}
             />
             <Stack.Screen name="Benefits" component={BenefitsScreen} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'slide_from_right' }} />
           </>
         ) : (
           // ─── Client Stack ───
@@ -207,6 +209,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Review" component={ReviewScreen} options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
             <Stack.Screen name="Benefits" component={BenefitsScreen} options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="Parts" component={PartsScreen} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'slide_from_right' }} />
           </>
         )}
       </Stack.Navigator>

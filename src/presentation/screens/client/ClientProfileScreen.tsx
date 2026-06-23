@@ -97,6 +97,7 @@ export default function ClientProfileScreen() {
           />
           <MenuItem icon="💳" label="Métodos de pago" desc="Efectivo, Tarjeta, Yape, Plin" />
           <MenuItem icon="❓" label="Ayuda y soporte" desc="FAQ, Chat" />
+          <MenuItem icon="⚙️" label="Servidor" desc="Cambiar la URL del backend" onPress={() => navigation.navigate('Settings')} />
         </View>
 
         {/* Logout */}

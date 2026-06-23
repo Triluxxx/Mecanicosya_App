@@ -275,6 +275,20 @@ export default function MechanicProfileScreen() {
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
+        {/* Servidor */}
+        <TouchableOpacity
+          style={styles.planCard}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <Text style={styles.planIcon}>⚙️</Text>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuLabel}>Servidor</Text>
+            <Text style={styles.menuDesc}>Cambiar la URL del backend</Text>
+          </View>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
           <Text style={styles.logoutText}>🚪  Cerrar sesión</Text>
