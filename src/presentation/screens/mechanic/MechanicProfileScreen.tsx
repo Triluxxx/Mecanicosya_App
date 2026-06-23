@@ -19,7 +19,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function MechanicProfileScreen() {
   const navigation = useNavigation<Nav>();
-  const { user, logout, updateProfile } = useAuthStore();
+  const { user, logout, updateProfile, syncBackendId } = useAuthStore();
   const [hasTowingVehicle, setHasTowingVehicle] = useState(user?.hasTowingVehicle ?? false);
   const [towingPlate, setTowingPlate] = useState(user?.towingPlate ?? '');
   const [editing, setEditing] = useState(false);
@@ -57,6 +57,10 @@ export default function MechanicProfileScreen() {
   async function toggleOnline(value: boolean) {
     setIsOnline(value);
     await updateProfile({ status: value ? 'online' : 'offline' });
+    if (value && user) {
+      // Por si la cuenta nunca se sincronizó con el backend (cuentas creadas antes de este fix).
+      syncBackendId({ lat: user.latitude, lng: user.longitude });
+    }
   }
 
   async function handleLogout() {

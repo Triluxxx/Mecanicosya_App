@@ -123,6 +123,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: true,
       isMechanic: user.role === 'mechanic',
     });
+    if (user.role === 'mechanic') {
+      // Para que el mecánico demo aparezca también a clientes en otros celulares.
+      get().syncBackendId({ lat: user.latitude, lng: user.longitude });
+    }
   },
 
   register: async (data) => {
@@ -161,6 +165,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (updated) {
       await DB.saveCurrentUser(updated);
       set({ user: updated, isAuthenticated: true, isMechanic: true });
+      // Para que aparezca en la lista de mecánicos disponibles de otros clientes.
+      get().syncBackendId({ lat: updated.latitude, lng: updated.longitude });
     }
   },
 

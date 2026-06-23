@@ -27,7 +27,7 @@ Notifications.setNotificationHandler({
 
 export default function MechanicHomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { user, refreshUser, updateProfile } = useAuthStore();
+  const { user, refreshUser, updateProfile, syncBackendId } = useAuthStore();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [isOnline, setIsOnline] = useState(user?.status === 'online');
   const [loading, setLoading] = useState(true);
@@ -86,6 +86,10 @@ export default function MechanicHomeScreen() {
   async function toggleOnline(value: boolean) {
     setIsOnline(value);
     await updateProfile({ status: value ? 'online' : 'offline' });
+    if (value && user) {
+      // Por si la cuenta nunca se sincronizó con el backend (cuentas creadas antes de este fix).
+      syncBackendId({ lat: user.latitude, lng: user.longitude });
+    }
   }
 
   async function handleAccept(requestId: string) {
