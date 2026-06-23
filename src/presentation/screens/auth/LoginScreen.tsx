@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { RootStackParamList } from '../../navigation/types';
 import { Colors } from '../../theme/colors';
@@ -16,12 +15,13 @@ import { UserRole } from '../../../data/local/Database';
 import Logo from '../../components/Logo';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+type LoadingKey = UserRole | 'login' | 'demo-client' | 'demo-mechanic' | null;
 
 export default function LoginScreen() {
   const navigation = useNavigation<Nav>();
-  const { sendOTP } = useAuthStore();
+  const { sendOTP, quickDemoLogin } = useAuthStore();
   const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState<UserRole | 'login' | null>(null);
+  const [loading, setLoading] = useState<LoadingKey>(null);
 
   const formatPhone = (text: string) => {
     const digits = text.replace(/\D/g, '');
@@ -57,13 +57,13 @@ export default function LoginScreen() {
     navigation.navigate('OTP', { phone: `+51 ${digits}`, code, role });
   }
 
-  async function handleQuickLogin(quickPhone: string, role: UserRole) {
-    setPhone(quickPhone);
-    const digits = quickPhone.replace(/\D/g, '');
-    setLoading(role);
-    const code = await sendOTP(`+51 ${digits}`);
+  // Demo: entra directo a la app con una cuenta de prueba ya completa, sin pedir datos.
+  async function handleQuickDemo(role: UserRole) {
+    const key: LoadingKey = role === 'mechanic' ? 'demo-mechanic' : 'demo-client';
+    setLoading(key);
+    await quickDemoLogin(role);
     setLoading(null);
-    navigation.navigate('OTP', { phone: `+51 ${digits}`, code, role });
+    // La navegación a la app ocurre sola: AppNavigator reacciona a isAuthenticated.
   }
 
   return (
@@ -72,20 +72,34 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Logo */}
           <View style={styles.logoContainer}>
-            <Logo size="lg" showText={true} />
+            <Logo size="lg" showText={true} layout="column" />
           </View>
 
-          <Text style={styles.title}>Bienvenido a MecánicosYa</Text>
-          <Text style={styles.subtitle}>
-            🏍️ Encuentra mecánicos para tu moto en minutos
+          {/* Hero */}
+          <View style={styles.hero}>
+            <Text style={styles.heroEmoji}>🏍️🔧</Text>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeIcon}>✓</Text>
+            </View>
+          </View>
+
+          <Text style={styles.title}>
+            Encuentra mecánicos para tu moto{' '}
+            <Text style={styles.titleHighlight}>en minutos</Text>
           </Text>
+          <Text style={styles.subtitle}>📍 Rápido, seguro y confiable</Text>
 
           {/* Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.prefix}>+51</Text>
+            <Text style={styles.phoneIcon}>📞</Text>
             <TextInput
               style={styles.input}
               placeholder="987 654 321"
@@ -101,40 +115,18 @@ export default function LoginScreen() {
             Te enviaremos un código de 6 dígitos para verificar tu número
           </Text>
 
-          {/* Crear cuenta nueva */}
-          <Text style={styles.sectionLabel}>¿Nuevo en MecánicosYa? Crea tu cuenta</Text>
-          <View style={styles.createRow}>
-            <TouchableOpacity
-              style={styles.createBtn}
-              onPress={() => handleCreateAccount('client')}
-              disabled={!!loading}
-              activeOpacity={0.85}
-            >
-              {loading === 'client' ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <>
-                  <Text style={styles.createIcon}>🏍️</Text>
-                  <Text style={styles.createBtnText}>Crear cuenta de Cliente</Text>
-                </>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.createBtn, styles.createBtnMechanic]}
-              onPress={() => handleCreateAccount('mechanic')}
-              disabled={!!loading}
-              activeOpacity={0.85}
-            >
-              {loading === 'mechanic' ? (
-                <ActivityIndicator color={Colors.primary} />
-              ) : (
-                <>
-                  <Text style={styles.createIcon}>🔧</Text>
-                  <Text style={[styles.createBtnText, { color: Colors.primary }]}>Crear cuenta de Mecánico</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.continueBtn, loading && styles.btnDisabled]}
+            onPress={handleSendCode}
+            disabled={!!loading}
+            activeOpacity={0.85}
+          >
+            {loading === 'login' ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.continueBtnText}>Continuar  →</Text>
+            )}
+          </TouchableOpacity>
 
           {/* Separador */}
           <View style={styles.separator}>
@@ -143,39 +135,86 @@ export default function LoginScreen() {
             <View style={styles.separatorLine} />
           </View>
 
-          <TouchableOpacity
-            style={[styles.sendBtn, loading && styles.sendBtnDisabled]}
-            onPress={handleSendCode}
-            disabled={!!loading}
-            activeOpacity={0.85}
-          >
-            {loading === 'login' ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <Text style={styles.sendBtnText}>Ya tengo cuenta · Iniciar sesión</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Quick login */}
-          <View style={styles.quickRow}>
+          <Text style={styles.sectionLabel}>👥  ¿No tienes cuenta?</Text>
+          <View style={styles.row}>
             <TouchableOpacity
-              style={styles.quickBtn}
-              onPress={() => handleQuickLogin('900000001', 'client')}
+              style={[styles.outlineCard, styles.outlineCardPrimary]}
+              onPress={() => handleCreateAccount('client')}
+              disabled={!!loading}
+              activeOpacity={0.85}
             >
-              <Text style={styles.quickIcon}>👤</Text>
-              <Text style={styles.quickLabel}>Cliente demo</Text>
+              {loading === 'client' ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : (
+                <>
+                  <Text style={styles.cardIcon}>🏍️</Text>
+                  <View style={styles.cardTextWrap}>
+                    <Text style={styles.cardLabel}>Crear cuenta</Text>
+                    <Text style={styles.cardLabelHighlight}>Cliente</Text>
+                  </View>
+                  <Text style={styles.cardArrow}>›</Text>
+                </>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.quickBtn}
-              onPress={() => handleQuickLogin('987011111', 'mechanic')}
+              style={styles.outlineCard}
+              onPress={() => handleCreateAccount('mechanic')}
+              disabled={!!loading}
+              activeOpacity={0.85}
             >
-              <Text style={styles.quickIcon}>🔧</Text>
-              <Text style={styles.quickLabel}>Mecánico demo</Text>
+              {loading === 'mechanic' ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : (
+                <>
+                  <Text style={styles.cardIcon}>🔧</Text>
+                  <View style={styles.cardTextWrap}>
+                    <Text style={styles.cardLabel}>Crear cuenta</Text>
+                    <Text style={styles.cardLabelHighlight}>Mecánico</Text>
+                  </View>
+                  <Text style={styles.cardArrow}>›</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.version}>MecánicosYa v1.0 · Solo motos 🏍️</Text>
-        </View>
+          <Text style={styles.sectionLabel}>✨  Probar la app</Text>
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={styles.demoCard}
+              onPress={() => handleQuickDemo('client')}
+              disabled={!!loading}
+              activeOpacity={0.85}
+            >
+              {loading === 'demo-client' ? (
+                <ActivityIndicator color={Colors.text} />
+              ) : (
+                <>
+                  <Text style={styles.cardIcon}>👤</Text>
+                  <Text style={styles.demoCardLabel}>Cliente demo</Text>
+                  <Text style={styles.cardArrow}>›</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.demoCard}
+              onPress={() => handleQuickDemo('mechanic')}
+              disabled={!!loading}
+              activeOpacity={0.85}
+            >
+              {loading === 'demo-mechanic' ? (
+                <ActivityIndicator color={Colors.text} />
+              ) : (
+                <>
+                  <Text style={styles.cardIcon}>🔧</Text>
+                  <Text style={styles.demoCardLabel}>Mecánico demo</Text>
+                  <Text style={styles.cardArrow}>›</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.footer}>🔒  Tus datos están protegidos</Text>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -184,26 +223,55 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: {
-    flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
-    gap: Spacing.md,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.sm,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
+  hero: {
+    alignSelf: 'center',
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  heroEmoji: { fontSize: 64 },
+  heroBadge: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.lg,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,107,53,0.15)',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroBadgeIcon: { color: Colors.primary, fontWeight: '900' },
   title: {
     color: Colors.text,
-    fontSize: FontSize.xl,
+    fontSize: FontSize.lg,
     fontWeight: '800',
     textAlign: 'center',
+    lineHeight: 26,
   },
+  titleHighlight: { color: Colors.primary },
   subtitle: {
     color: Colors.textSecondary,
-    fontSize: FontSize.md,
+    fontSize: FontSize.sm,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -222,76 +290,79 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: Colors.card,
   },
+  phoneIcon: { fontSize: 16, paddingHorizontal: 6 },
   input: {
     flex: 1,
     color: Colors.text,
     fontSize: FontSize.lg,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 16,
-  },
-  sendBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-    padding: 16,
-    alignItems: 'center',
-  },
-  sendBtnDisabled: { opacity: 0.6 },
-  sendBtnText: {
-    color: Colors.white,
-    fontSize: FontSize.lg,
-    fontWeight: '800',
   },
   hint: {
     color: Colors.textMuted,
     fontSize: FontSize.xs,
     textAlign: 'center',
   },
+  continueBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.lg,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+  },
+  btnDisabled: { opacity: 0.6 },
+  continueBtnText: {
+    color: Colors.white,
+    fontSize: FontSize.lg,
+    fontWeight: '800',
+  },
+  separator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginVertical: Spacing.sm,
+  },
+  separatorLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  separatorText: { color: Colors.textMuted, fontSize: FontSize.sm },
   sectionLabel: {
     color: Colors.textSecondary,
     fontSize: FontSize.sm,
     fontWeight: '600',
     textAlign: 'center',
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
-  createRow: { gap: Spacing.sm },
-  createBtn: {
-    flexDirection: 'row',
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  createBtnMechanic: {
-    backgroundColor: Colors.surface,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  createIcon: { fontSize: 20 },
-  createBtnText: { color: Colors.white, fontSize: FontSize.md, fontWeight: '800' },
-  separator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    marginTop: Spacing.md,
-  },
-  separatorLine: { flex: 1, height: 1, backgroundColor: Colors.border },
-  separatorText: { color: Colors.textMuted, fontSize: FontSize.sm },
-  quickRow: { flexDirection: 'row', gap: Spacing.sm },
-  quickBtn: {
+  row: { flexDirection: 'row', gap: Spacing.sm },
+  outlineCard: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    padding: Spacing.md,
-    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    padding: Spacing.sm,
     gap: 6,
+  },
+  outlineCardPrimary: { borderColor: Colors.primary },
+  cardIcon: { fontSize: 20 },
+  cardTextWrap: { flex: 1 },
+  cardLabel: { color: Colors.textSecondary, fontSize: FontSize.xs },
+  cardLabelHighlight: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '800' },
+  cardArrow: { color: Colors.textMuted, fontSize: 18 },
+  demoCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,
+    padding: Spacing.sm,
+    gap: 6,
   },
-  quickIcon: { fontSize: 28 },
-  quickLabel: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' },
-  version: {
+  demoCardLabel: { flex: 1, color: Colors.text, fontSize: FontSize.sm, fontWeight: '700' },
+  footer: {
     color: Colors.textMuted,
     fontSize: FontSize.xs,
     textAlign: 'center',

@@ -6,6 +6,7 @@ import { Colors } from '../theme/colors';
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   showText?: boolean;
+  layout?: 'row' | 'column';
 }
 
 function WrenchIcon({ size = 40 }: { size?: number }) {
@@ -40,24 +41,25 @@ function WrenchIcon({ size = 40 }: { size?: number }) {
   );
 }
 
-export default function Logo({ size = 'md', showText = true }: LogoProps) {
+export default function Logo({ size = 'md', showText = true, layout = 'row' }: LogoProps) {
   const iconSize = size === 'sm' ? 36 : size === 'md' ? 56 : 80;
   const textSizes = {
     sm: { brand: 16, tag: 9 },
     md: { brand: 22, tag: 11 },
     lg: { brand: 32, tag: 14 },
   };
+  const isColumn = layout === 'column';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isColumn && styles.containerColumn]}>
       <WrenchIcon size={iconSize} />
       {showText && (
-        <View style={styles.textContainer}>
-          <Text style={[styles.brand, { fontSize: textSizes[size].brand }]}>
+        <View style={[styles.textContainer, isColumn && styles.textContainerColumn]}>
+          <Text style={[styles.brand, { fontSize: textSizes[size].brand }, isColumn && styles.textCenter]}>
             <Text style={styles.brandOrange}>Mecánicos</Text>
             <Text style={styles.brandWhite}>Ya</Text>
           </Text>
-          <Text style={[styles.tagline, { fontSize: textSizes[size].tag }]}>
+          <Text style={[styles.tagline, { fontSize: textSizes[size].tag }, isColumn && styles.textCenter]}>
             Tu mecánico en minutos
           </Text>
         </View>
@@ -72,8 +74,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  containerColumn: {
+    flexDirection: 'column',
+    gap: 6,
+  },
   textContainer: {
     justifyContent: 'center',
+  },
+  textContainerColumn: {
+    alignItems: 'center',
+  },
+  textCenter: {
+    textAlign: 'center',
   },
   brand: {
     fontWeight: '800',

@@ -13,6 +13,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   login: (phone: string, code: string) => Promise<{ success: boolean; isNewUser: boolean }>;
   sendOTP: (phone: string) => Promise<string>;
+  quickDemoLogin: (role: UserRole) => Promise<void>;
   register: (data: { phone: string; role: UserRole; name: string; vehicle?: string; plan?: UserPlan }) => Promise<void>;
   registerMechanic: (data: {
     name: string;
@@ -82,6 +83,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isMechanic: user.role === 'mechanic',
     });
     return { success: true, isNewUser: false };
+  },
+
+  // Login de demo instantáneo: crea (o reutiliza) una cuenta de prueba ya completa,
+  // sin pedir datos al usuario, para que cualquiera pueda probar la app de una.
+  quickDemoLogin: async (role: UserRole) => {
+    const phone = role === 'mechanic' ? '+51 987011111' : '+51 900000001';
+    let user = await DB.findUserByPhone(phone);
+    if (!user) {
+      user = await DB.createUser({
+        phone,
+        role,
+        name: role === 'mechanic' ? 'Mecánico Demo' : 'Cliente Demo',
+        vehicle: role === 'client' ? 'Honda CB 190R 2024' : '',
+        plan: 'free',
+        ...(role === 'mechanic' && {
+          specialties: ['Motor 4T', 'Frenos', 'Llantas'],
+          vehicleTypes: ['Todos los tipos'],
+          pricePerHour: 30,
+          yearsExperience: 5,
+          bio: 'Cuenta de demostración para probar la app.',
+          status: 'online' as const,
+        }),
+      });
+    }
+    await DB.saveCurrentUser(user);
+    set({
+      user,
+      isAuthenticated: true,
+      isMechanic: user.role === 'mechanic',
+    });
   },
 
   register: async (data) => {

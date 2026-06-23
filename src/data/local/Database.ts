@@ -111,7 +111,7 @@ export async function createUser(data: Partial<User> & { phone: string; role: Us
     vehicleTypes: data.vehicleTypes ?? [],
     latitude: data.latitude ?? -6.4888,
     longitude: data.longitude ?? -76.3603,
-    status: data.role === 'mechanic' ? 'offline' : 'online',
+    status: data.status ?? (data.role === 'mechanic' ? 'offline' : 'online'),
     rating: data.rating ?? 5.0,
     totalReviews: data.totalReviews ?? 0,
     totalServices: data.totalServices ?? 0,
